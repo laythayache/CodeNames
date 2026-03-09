@@ -71,4 +71,10 @@ export class TimerManager {
   getRemaining(roomCode: string): number {
     return this.timers.get(roomCode)?.secondsRemaining ?? 0;
   }
+
+  stopAll(): void {
+    for (const [roomCode] of this.timers) {
+      this.stop(roomCode);
+    }
+  }
 }

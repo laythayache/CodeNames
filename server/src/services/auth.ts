@@ -2,8 +2,8 @@ import jwt from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import { Avatar, JwtPayload } from "shared/types";
 
-// In production, use a proper secret from env
-const JWT_SECRET = process.env.JWT_SECRET || "kalak-game-night-secret-" + Date.now();
+// In production, set JWT_SECRET env var. Fallback is stable but not secret.
+const JWT_SECRET = process.env.JWT_SECRET || "kalak-game-night-secret-change-me";
 
 export function createToken(displayName: string, roomCode: string, avatar: Avatar): { token: string; playerId: string } {
   const playerId = uuidv4();

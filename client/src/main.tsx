@@ -4,13 +4,16 @@ import "./index.css";
 import App from "./App.tsx";
 import { PlayerProvider } from "./context/PlayerContext.tsx";
 import { GameProvider } from "./context/GameContext.tsx";
+import { ErrorBoundary } from "./components/ErrorBoundary.tsx";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <PlayerProvider>
-      <GameProvider>
-        <App />
-      </GameProvider>
-    </PlayerProvider>
+    <ErrorBoundary>
+      <PlayerProvider>
+        <GameProvider>
+          <App />
+        </GameProvider>
+      </PlayerProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );

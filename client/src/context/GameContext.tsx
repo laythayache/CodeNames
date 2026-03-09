@@ -88,7 +88,15 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     case "SET_VOTES":
       return { ...state, votes: action.payload.votes };
     case "SET_KALAK_GAME_STATE":
-      return { ...state, kalakState: action.payload, kalakGameOver: null, kalakRoundResult: null, kalakLoading: false };
+      return {
+        ...state,
+        kalakState: action.payload,
+        kalakGameOver: null,
+        kalakRoundResult: null,
+        kalakLoading: false,
+        // Clear rejection when server confirms player is no longer rejected
+        kalakAnswerRejected: action.payload.answerRejected ? state.kalakAnswerRejected : false,
+      };
     case "SET_KALAK_LOBBY_STATE":
       return {
         ...state,
@@ -105,9 +113,14 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     case "SET_KALAK_ROUND_RESULT":
       return { ...state, kalakRoundResult: action.payload };
     case "SET_KALAK_HOST_DISPLAY":
-      return { ...state, kalakHostDisplay: action.payload, kalakGameOver: null };
+      return { ...state, kalakHostDisplay: action.payload };
     case "SET_KALAK_LOADING":
-      return { ...state, kalakLoading: action.payload };
+      return {
+        ...state,
+        kalakLoading: action.payload,
+        // Clear lobby state so host display routing doesn't stay on lobby page
+        ...(action.payload ? { kalakLobbyState: null } : {}),
+      };
     case "SET_KALAK_LEADERBOARD":
       return { ...state, kalakLeaderboard: action.payload };
     case "SET_KALAK_ANSWER_REJECTED":

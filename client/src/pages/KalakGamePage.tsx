@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useGame } from "../context/GameContext";
 import { usePlayer } from "../context/PlayerContext";
 import { getSocket } from "../socket";
@@ -64,7 +64,7 @@ export function KalakGamePage() {
             myName={player.displayName}
             allPlayers={gs.players.filter((p) => p.isConnected).map((p) => p.displayName)}
             answerRejected={state.kalakAnswerRejected}
-            onRejectionSeen={() => dispatch({ type: "SET_KALAK_ANSWER_REJECTED", payload: false })}
+            dispatch={dispatch}
           />
         )}
 
@@ -115,27 +115,35 @@ function Scoreboard({ scores, myName }: {
   );
 }
 
-function AnsweringPhase({ playersAnswered, myName, allPlayers, answerRejected, onRejectionSeen }: {
+function AnsweringPhase({ playersAnswered, myName, allPlayers, answerRejected, dispatch }: {
   playersAnswered: string[];
   myName: string;
   allPlayers: string[];
   answerRejected: boolean;
-  onRejectionSeen: () => void;
+  dispatch: React.Dispatch<{ type: "SET_KALAK_ANSWER_REJECTED"; payload: boolean }>;
 }) {
   const [answer, setAnswer] = useState("");
   const [submitted, setSubmitted] = useState(playersAnswered.includes(myName));
 
+  const clearRejection = useCallback(() => {
+    dispatch({ type: "SET_KALAK_ANSWER_REJECTED", payload: false });
+  }, [dispatch]);
+
   // Answer was rejected by server (player guessed the correct answer)
   useEffect(() => {
-    if (answerRejected) {
+    if (answerRejected && !playersAnswered.includes(myName)) {
       setSubmitted(false);
       setAnswer("");
       playSound("answer-rejected");
-      // Auto-clear after 4 seconds
-      const timeout = setTimeout(onRejectionSeen, 4000);
+      // Auto-clear banner after 4 seconds
+      const timeout = setTimeout(clearRejection, 4000);
       return () => clearTimeout(timeout);
     }
-  }, [answerRejected, onRejectionSeen]);
+    // Player successfully resubmitted — clear the rejection state
+    if (answerRejected && playersAnswered.includes(myName)) {
+      clearRejection();
+    }
+  }, [answerRejected, playersAnswered, myName, clearRejection]);
 
   const handleSubmit = () => {
     if (!answer.trim()) return;
@@ -146,10 +154,10 @@ function AnsweringPhase({ playersAnswered, myName, allPlayers, answerRejected, o
 
   // Update submitted state if server says we already answered
   useEffect(() => {
-    if (playersAnswered.includes(myName) && !submitted && !answerRejected) {
+    if (playersAnswered.includes(myName) && !submitted) {
       setSubmitted(true);
     }
-  }, [playersAnswered, myName, submitted, answerRejected]);
+  }, [playersAnswered, myName, submitted]);
 
   return (
     <div className="space-y-4">

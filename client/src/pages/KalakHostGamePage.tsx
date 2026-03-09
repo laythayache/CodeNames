@@ -4,6 +4,7 @@ import { AvatarDisplay } from "../components/Avatar";
 import { KalakRoundPhase, GamePhase } from "shared/types";
 import type { KalakHostDisplayPayload, KalakRoundResult } from "shared/types";
 import { playSound } from "../services/sounds";
+import { getSocket } from "../socket";
 
 // ── Reveal sub-steps for dramatic effect ──
 
@@ -11,20 +12,61 @@ type RevealStep = "OPTIONS" | "CORRECT" | "VOTES" | "SHAME";
 
 const REVEAL_STEP_DURATION: Record<RevealStep, number> = {
   OPTIONS: 2000,
-  CORRECT: 2000,
-  VOTES: 2000,
-  SHAME: 2000,
+  CORRECT: 4000,
+  VOTES: 5000,
+  SHAME: 5000,
 };
 
 export function KalakHostGamePage() {
   const { state } = useGame();
   const display = state.kalakHostDisplay;
   const roundResult = state.kalakRoundResult;
+  const leaderboard = state.kalakLeaderboard;
   const scores = display?.scores ?? state.kalakHostDisplay?.scores ?? [];
 
   if (!display) return null;
 
   const isArabic = display.language === "ARABIC";
+
+  // Full-screen leaderboard overlay (shown every 5 rounds)
+  if (leaderboard && leaderboard.length > 0) {
+    return (
+      <div className="min-h-dvh bg-gray-950 text-white flex flex-col items-center justify-center relative"
+           dir={isArabic ? "rtl" : "ltr"}>
+        <div className="absolute inset-0 bg-linear-to-br from-purple-950/40 via-gray-950 to-gray-950 pointer-events-none" />
+        <div className="relative z-10 w-full max-w-3xl px-6 animate-[fadeIn_0.5s_ease-out]">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-2 text-purple-300">Leaderboard</h2>
+          <p className="text-gray-500 text-center text-sm mb-8">After round {display.currentRound}</p>
+          <div className="space-y-3">
+            {leaderboard.map((s, i) => {
+              const barWidth = leaderboard[0].score > 0 ? (s.score / leaderboard[0].score) * 100 : 0;
+              return (
+                <div key={s.displayName} className="flex items-center gap-4">
+                  <span className={`w-10 text-center text-2xl font-bold
+                    ${i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-400" : i === 2 ? "text-orange-400" : "text-gray-600"}`}>
+                    {i + 1}
+                  </span>
+                  <span className="w-36 text-lg font-semibold text-white truncate">{s.displayName}</span>
+                  <div className="flex-1 h-8 bg-gray-800 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-1000 ease-out
+                        ${i === 0 ? "bg-linear-to-r from-yellow-600 to-yellow-400"
+                          : i === 1 ? "bg-linear-to-r from-gray-500 to-gray-400"
+                          : i === 2 ? "bg-linear-to-r from-orange-600 to-orange-400"
+                          : "bg-linear-to-r from-purple-700 to-purple-500"
+                        }`}
+                      style={{ width: `${Math.max(barWidth, 3)}%` }}
+                    />
+                  </div>
+                  <span className="w-16 text-right text-2xl font-bold text-purple-400">{s.score}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -46,16 +88,16 @@ export function KalakHostGamePage() {
           </span>
         </div>
 
-        {display.timerSeconds !== null && (
+        {state.timerSeconds !== null && (
           <div className={`bg-gray-900/80 backdrop-blur rounded-xl px-5 py-2 border
-            ${display.timerSeconds <= 10
+            ${state.timerSeconds <= 10
               ? "border-red-500/50 animate-pulse"
               : "border-gray-800"
             }`}
           >
             <span className={`text-2xl font-mono font-bold
-              ${display.timerSeconds <= 10 ? "text-red-400" : "text-white"}`}>
-              {display.timerSeconds}s
+              ${state.timerSeconds <= 10 ? "text-red-400" : "text-white"}`}>
+              {state.timerSeconds}s
             </span>
           </div>
         )}
@@ -105,6 +147,9 @@ export function KalakHostGamePage() {
           <HostScoreboard scores={scores} />
         </div>
       )}
+
+      {/* Admin panel */}
+      <HostAdminPanel players={display.players} />
     </div>
   );
 }
@@ -426,6 +471,56 @@ function RevealPhase({
                 <div className="text-lg font-bold text-purple-400">+{delta.total}</div>
               </div>
             ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Admin Panel ──
+
+function HostAdminPanel({ players }: { players: { displayName: string }[] }) {
+  const [expanded, setExpanded] = useState(false);
+
+  return (
+    <div className="fixed bottom-4 left-4 right-4 z-50">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full py-1.5 text-xs font-bold bg-gray-900/80 text-gray-500 rounded-lg
+                   hover:bg-gray-800 active:scale-[0.99] transition-all border border-gray-800"
+      >
+        {expanded ? "Hide Admin" : "Admin"}
+      </button>
+      {expanded && (
+        <div className="bg-gray-900/90 border border-gray-800 rounded-xl p-3 mt-1 flex gap-2 flex-wrap items-center">
+          <button
+            onClick={() => {
+              if (confirm("End the game?")) {
+                getSocket().emit("client:admin-end-game");
+              }
+            }}
+            className="px-4 py-2 bg-red-600 text-white rounded-lg text-xs font-bold
+                       hover:bg-red-700 active:scale-95 transition-all"
+          >
+            End Game
+          </button>
+          <select
+            onChange={(e) => {
+              if (e.target.value && confirm(`Kick ${e.target.value}?`)) {
+                getSocket().emit("client:admin-kick", { displayName: e.target.value });
+              }
+              e.target.value = "";
+            }}
+            className="px-3 py-2 rounded-lg bg-gray-800 border border-gray-700 text-xs text-white"
+            defaultValue=""
+          >
+            <option value="" disabled>Kick player...</option>
+            {players.map((p) => (
+              <option key={p.displayName} value={p.displayName}>
+                {p.displayName}
+              </option>
+            ))}
+          </select>
         </div>
       )}
     </div>

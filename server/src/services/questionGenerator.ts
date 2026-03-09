@@ -130,7 +130,10 @@ Respond ONLY with a valid JSON array (no markdown, no code fences):
     const text = response.choices[0]?.message?.content?.trim();
     if (!text) return [];
 
-    const parsed = JSON.parse(text);
+    // Strip markdown code fences if present
+    const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    let parsed: unknown;
+    try { parsed = JSON.parse(cleaned); } catch { return []; }
     if (!Array.isArray(parsed)) return [];
 
     const now = Date.now();
@@ -224,7 +227,9 @@ Respond ONLY with valid JSON (no markdown, no code fences):
     const text = response.choices[0]?.message?.content?.trim();
     if (!text) return null;
 
-    const parsed = JSON.parse(text);
+    const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    let parsed: { question?: string; answer?: string; category?: string };
+    try { parsed = JSON.parse(cleaned); } catch { return null; }
     if (!parsed.question || !parsed.answer) return null;
 
     const matchedCat = categories.find(

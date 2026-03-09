@@ -1,4 +1,4 @@
-export const PORT = 3000;
+export const PORT = parseInt(process.env.PORT || "3000", 10);
 export const DEFAULT_TIMER_DURATION = 120; // seconds
 export const ABANDONMENT_TIMEOUT = 5 * 60 * 1000; // 5 minutes
 export const HOST_TRANSFER_TIMEOUT = 30 * 1000; // 30 seconds

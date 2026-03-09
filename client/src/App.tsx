@@ -87,6 +87,14 @@ function AppContent() {
       // Kalak host display
       if (state.kalakGameOver) return <KalakHostGameOverPage />;
       if (state.kalakHostDisplay) return <KalakHostGamePage />;
+      if (state.kalakLoading) return (
+        <div className="min-h-screen flex items-center justify-center bg-felt">
+          <div className="bg-parchment rounded-2xl p-12 text-center shadow-xl">
+            <div className="animate-spin w-12 h-12 border-4 border-wood border-t-transparent rounded-full mx-auto mb-6" />
+            <h2 className="text-2xl font-bold text-wood-dark">Preparing questions...</h2>
+          </div>
+        </div>
+      );
       if (state.kalakLobbyState) return <KalakHostLobbyPage />;
     } else {
       // Codenames host display

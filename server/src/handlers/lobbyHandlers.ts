@@ -34,8 +34,12 @@ export function registerLobbyHandlers(
   // Join room — player joins with name + avatar
   socket.on("client:join-room", (data: JoinRoomPayload) => {
     const { roomCode, displayName, avatar } = data;
-    if (!displayName?.trim()) {
-      socket.emit("server:join-error", { message: "Display name is required" });
+    if (!displayName?.trim() || displayName.trim().length > 20) {
+      socket.emit("server:join-error", { message: !displayName?.trim() ? "Display name is required" : "Name too long (max 20 chars)" });
+      return;
+    }
+    if (!roomCode || typeof roomCode !== "string") {
+      socket.emit("server:join-error", { message: "Room code is required" });
       return;
     }
 
@@ -85,7 +89,7 @@ export function registerLobbyHandlers(
         return;
       }
 
-      game.addPlayer(socket.id, displayName.trim(), false);
+      game.addPlayer(socket.id, displayName.trim(), false, avatar);
       socket.join(game.roomCode);
 
       const { token } = createToken(displayName.trim(), roomCode.toUpperCase(), avatar);

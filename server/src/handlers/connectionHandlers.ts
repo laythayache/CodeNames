@@ -69,11 +69,6 @@ export function registerConnectionHandlers(
 
     player.isConnected = false;
 
-    // For Kalak, don't clear submitted answers on disconnect
-    if (game.gameType !== GameType.KALAK) {
-      game.removeVotesForPlayer(player.displayName);
-    }
-
     // Notify room
     if (game.gameType === GameType.KALAK) {
       const kg = game as KalakGame;

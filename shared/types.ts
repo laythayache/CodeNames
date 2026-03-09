@@ -240,7 +240,7 @@ export const DEFAULT_KALAK_TIMERS: KalakTimerConfig = {
   questionDisplay: 3,
   answering: 60,
   voting: 30,
-  reveal: 8,
+  reveal: 18,
   leaderboard: 10,
 };
 

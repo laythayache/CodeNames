@@ -67,7 +67,7 @@ export function KalakHostGameOverPage() {
   const winnerPlayer = hostDisplay?.players.find((p) => p.displayName === winner);
 
   const handleNewGame = () => {
-    dispatch({ type: "RESET" });
+    // Don't RESET — server will send new state that clears game over automatically
     getSocket().emit("client:kalak-rematch");
   };
 

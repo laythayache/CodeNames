@@ -48,7 +48,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       roomCode: localStorage.getItem("codenames:roomCode") || "",
       gameType: (localStorage.getItem("codenames:gameType") as GameType) || null,
       token: localStorage.getItem("codenames:token") || null,
-      avatar: savedAvatar ? JSON.parse(savedAvatar) : null,
+      avatar: (() => { try { return savedAvatar ? JSON.parse(savedAvatar) : null; } catch { return null; } })(),
     };
   });
 

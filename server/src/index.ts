@@ -5,6 +5,8 @@ import express from "express";
 import http from "http";
 import os from "os";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { Server } from "socket.io";
 import { PORT } from "./config";
 import { GameManager } from "./managers/GameManager";
@@ -16,15 +18,28 @@ import { registerKalakHandlers } from "./handlers/kalakHandlers";
 import { loadQuestionCache } from "./services/questionGenerator";
 
 const app = express();
-app.use(cors());
+
+// Security headers (relaxed CSP for game app with inline styles/scripts)
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
+
+const CORS_ORIGIN = process.env.CORS_ORIGIN || "*";
+app.use(cors({ origin: CORS_ORIGIN }));
+
+// Rate limiting for API routes
+app.use("/api", rateLimit({ windowMs: 60_000, max: 60 }));
 
 const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: CORS_ORIGIN,
     methods: ["GET", "POST"],
   },
+  pingInterval: 25000,
+  pingTimeout: 20000,
 });
 
 const gameManager = new GameManager();
@@ -33,11 +48,25 @@ const timerManager = getTimerManager();
 // Load cached questions for Kalak
 loadQuestionCache();
 
+// Health check
+app.get("/health", (_req, res) => {
+  res.json({ status: "ok", uptime: process.uptime() });
+});
+
 // API endpoint to get LAN IP for QR code generation
 app.get("/api/server-info", (_req, res) => {
   const lanIp = getLanIp();
   res.json({ ip: lanIp, port: PORT });
 });
+
+// Serve client build in production
+if (process.env.NODE_ENV === "production") {
+  const clientDist = path.resolve(__dirname, "../../client/dist");
+  app.use(express.static(clientDist));
+  app.get("*", (_req, res) => {
+    res.sendFile(path.join(clientDist, "index.html"));
+  });
+}
 
 io.on("connection", (socket) => {
   console.log(`Connected: ${socket.id}`);
@@ -74,3 +103,31 @@ function getLanIp(): string {
   }
   return "localhost";
 }
+
+// ── Graceful shutdown ──
+
+function shutdown(signal: string) {
+  console.log(`${signal} received, shutting down...`);
+  timerManager.stopAll();
+  io.close();
+  server.close(() => {
+    console.log("Server closed.");
+    process.exit(0);
+  });
+  // Force exit after 5s if close hangs
+  setTimeout(() => process.exit(1), 5000).unref();
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
+
+// ── Global error handlers ──
+
+process.on("uncaughtException", (err) => {
+  console.error("Uncaught exception:", err);
+  shutdown("uncaughtException");
+});
+
+process.on("unhandledRejection", (reason) => {
+  console.error("Unhandled rejection:", reason);
+});

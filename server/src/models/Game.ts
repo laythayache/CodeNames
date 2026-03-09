@@ -1,5 +1,5 @@
 import {
-  Card, CardPayload, CardType, Clue, CodenamesHostDisplayPayload, GamePhase, GameStatePayload,
+  Avatar, Card, CardPayload, CardType, Clue, CodenamesHostDisplayPayload, GamePhase, GameStatePayload,
   GameStats, GameType, LogEntry, LobbyStatePayload, Player, Role, Team, TurnPhase,
 } from "shared/types";
 import { generateBoard } from "../utils/boardGenerator";
@@ -33,7 +33,7 @@ export class Game implements BaseGame {
 
   // ── Player Management ──
 
-  addPlayer(id: string, displayName: string, isHost: boolean): Player {
+  addPlayer(id: string, displayName: string, isHost: boolean, avatar?: Avatar | null): Player {
     const player: Player = {
       id,
       displayName,
@@ -41,7 +41,7 @@ export class Game implements BaseGame {
       role: null,
       isHost,
       isConnected: true,
-      avatar: null,
+      avatar: avatar || null,
       joinedAtRound: null,
     };
     this.players.push(player);
