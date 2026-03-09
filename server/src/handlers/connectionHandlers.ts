@@ -5,10 +5,9 @@ import { Game } from "../models/Game";
 import { KalakGame } from "../models/KalakGame";
 import type { BaseGame } from "../models/BaseGame";
 import { verifyToken } from "../services/auth";
-import { ABANDONMENT_TIMEOUT, HOST_TRANSFER_TIMEOUT } from "../config";
+import { ABANDONMENT_TIMEOUT } from "../config";
 
 const disconnectTimers: Map<string, NodeJS.Timeout> = new Map();
-const hostTransferTimers: Map<string, NodeJS.Timeout> = new Map();
 
 export function registerConnectionHandlers(
   io: Server,
@@ -52,7 +51,7 @@ export function registerConnectionHandlers(
   socket.on("disconnect", () => {
     console.log(`Disconnected: ${socket.id}`);
 
-    // Check if this is a host display disconnecting
+    // Check if this is a host display disconnecting (either game type)
     if (gameManager.isHostDisplay(socket.id)) {
       const hostGame = gameManager.findGameByHostDisplaySocket(socket.id);
       if (hostGame) {
@@ -92,12 +91,7 @@ export function registerConnectionHandlers(
         io.to(game.roomCode).emit("server:votes-updated", {
           votes: cg.getVotesPayload(),
         });
-        for (const p of game.players) {
-          if (p.isConnected) {
-            const sock = io.sockets.sockets.get(p.id);
-            if (sock) sock.emit("server:game-state", cg.getGameStatePayload(p));
-          }
-        }
+        broadcastCodenamesState(io, cg);
       }
     }
 
@@ -110,33 +104,6 @@ export function registerConnectionHandlers(
         console.log(`Player abandoned: ${player.displayName} from room ${game.roomCode}`);
       }, ABANDONMENT_TIMEOUT)
     );
-
-    // Host transfer (Codenames only)
-    if (player.isHost && game.gameType === GameType.CODENAMES) {
-      hostTransferTimers.set(
-        game.roomCode,
-        setTimeout(() => {
-          hostTransferTimers.delete(game.roomCode);
-          const nextHost = game.players.find((p) => p.isConnected && !p.isHost);
-          if (nextHost) {
-            player.isHost = false;
-            nextHost.isHost = true;
-            console.log(`Host transferred to ${nextHost.displayName}`);
-            const cg = game as Game;
-            if (game.phase === GamePhase.LOBBY) {
-              io.to(game.roomCode).emit("server:lobby-state", cg.getLobbyState());
-            } else {
-              for (const p of game.players) {
-                if (p.isConnected) {
-                  const sock = io.sockets.sockets.get(p.id);
-                  if (sock) sock.emit("server:game-state", cg.getGameStatePayload(p));
-                }
-              }
-            }
-          }
-        }, HOST_TRANSFER_TIMEOUT)
-      );
-    }
 
     // Clean up empty games
     const connected = game.players.filter((p) => p.isConnected);
@@ -162,14 +129,6 @@ function reconnectPlayer(io: Server, socket: Socket, game: BaseGame, player: Pla
   if (timer) {
     clearTimeout(timer);
     disconnectTimers.delete(timerKey);
-  }
-
-  if (player.isHost) {
-    const htTimer = hostTransferTimers.get(game.roomCode);
-    if (htTimer) {
-      clearTimeout(htTimer);
-      hostTransferTimers.delete(game.roomCode);
-    }
   }
 
   console.log(`Reconnected: ${player.displayName} to room ${game.roomCode}`);
@@ -202,5 +161,17 @@ function broadcastKalakState(io: Server, game: KalakGame): void {
   if (game.hostDisplaySocketId) {
     const hostSock = io.sockets.sockets.get(game.hostDisplaySocketId);
     if (hostSock) hostSock.emit("server:kalak-host-display", game.getHostDisplayPayload());
+  }
+}
+
+function broadcastCodenamesState(io: Server, game: Game): void {
+  for (const p of game.players) {
+    if (!p.isConnected) continue;
+    const sock = io.sockets.sockets.get(p.id);
+    if (sock) sock.emit("server:game-state", game.getGameStatePayload(p));
+  }
+  if (game.hostDisplaySocketId) {
+    const hostSock = io.sockets.sockets.get(game.hostDisplaySocketId);
+    if (hostSock) hostSock.emit("server:codenames-host-display", game.getHostDisplayPayload());
   }
 }

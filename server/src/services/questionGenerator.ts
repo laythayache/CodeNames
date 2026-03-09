@@ -4,7 +4,7 @@ import * as path from "path";
 import { KalakLanguage } from "shared/types";
 import { CachedQuestion, FALLBACK_QUESTIONS } from "../data/fallbackQuestions";
 
-const CACHE_PATH = path.join(__dirname, "../data/questionCache.json");
+const CACHE_PATH = path.join(__dirname, "../../../data/questionCache.json");
 
 let cachedQuestions: CachedQuestion[] = [];
 
@@ -28,6 +28,7 @@ function saveQuestionCache(): void {
 }
 
 function matchesCategory(questionCat: string, selectedCategories: string[]): boolean {
+  if (selectedCategories.length === 0) return true; // no filter = match all
   const qLower = questionCat.toLowerCase();
   return selectedCategories.some((c) => c.toLowerCase() === qLower);
 }
@@ -108,8 +109,11 @@ async function batchGenerateQuestions(
 - Counterintuitive, bizarre, or delightfully absurd trivia
 - NOT dry textbook questions — think "pub quiz meets comedy show"
 
-Generate ${count} trivia questions in ${lang} for the category "${category}".
-Each answer must be SHORT (1-4 words).
+Generate ${count} trivia questions in ${lang} about the topic "${category}".
+CRITICAL RULES:
+- Each answer must be SHORT (1-4 words)
+- The answer must NEVER be "${category}" itself or contain the word "${category}" — questions should be ABOUT this topic, but the answer must be a specific fact, name, number, or detail
+- Example: for category "France" do NOT answer "France" — instead ask things where the answer is "Croissants", "Napoleon", "3 colors", etc.
 ${avoidList}
 Respond ONLY with a valid JSON array (no markdown, no code fences):
 [{"question": "...", "answer": "..."}, ...]`;
@@ -201,7 +205,9 @@ async function generateFromAI(
 
 Generate ONE trivia question in ${lang}.
 Category: one of [${cats}]
-The answer must be SHORT (1-4 words).
+CRITICAL RULES:
+- The answer must be SHORT (1-4 words)
+- The answer must NEVER be the category name itself — questions should be ABOUT the topic, but the answer must be a specific fact, name, number, or detail
 
 ${avoidList ? `Avoid these previously used questions:\n${avoidList}\n` : ""}
 Respond ONLY with valid JSON (no markdown, no code fences):

@@ -211,10 +211,18 @@ export function registerKalakHandlers(
     // Notify everyone that game is starting (loading state)
     io.to(game.roomCode).emit("server:kalak-loading", { message: "Generating questions..." });
 
-    // Preload questions for all categories
-    await preloadCategories(game.language, game.categories, game.freeMode);
+    try {
+      // Preload questions for all categories
+      await preloadCategories(game.language, game.categories, game.freeMode);
 
-    startNextRound(io, game, timerManager);
+      // Game may have been ended/reset while we were preloading
+      if (game.phase !== GamePhase.PLAYING) return;
+
+      await startNextRound(io, game, timerManager);
+    } catch (err) {
+      console.error("Failed to start Kalak game:", err);
+      socket.emit("server:error", { message: "Failed to generate questions. Try again." });
+    }
   });
 
   socket.on("client:kalak-submit-answer", (data: KalakSubmitAnswerPayload) => {
@@ -280,8 +288,16 @@ export function registerKalakHandlers(
     game.rematch();
 
     io.to(game.roomCode).emit("server:kalak-loading", { message: "Generating questions..." });
-    await preloadCategories(game.language, game.categories, game.freeMode);
 
-    startNextRound(io, game, timerManager);
+    try {
+      await preloadCategories(game.language, game.categories, game.freeMode);
+
+      if (game.phase !== GamePhase.PLAYING) return;
+
+      await startNextRound(io, game, timerManager);
+    } catch (err) {
+      console.error("Failed to start Kalak rematch:", err);
+      socket.emit("server:error", { message: "Failed to generate questions. Try again." });
+    }
   });
 }

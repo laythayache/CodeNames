@@ -18,18 +18,6 @@ export function LobbyPage() {
     getSocket().emit("client:pick-team", { team, role });
   };
 
-  const handleStart = () => {
-    getSocket().emit("client:start-game");
-  };
-
-  const handleUpdateSettings = (timerEnabled: boolean, timerDuration: number) => {
-    getSocket().emit("client:update-settings", { timerEnabled, timerDuration });
-  };
-
-  const canStart = redPlayers.length > 0 && bluePlayers.length > 0
-    && redPlayers.some((p) => p.role === Role.SPYMASTER)
-    && bluePlayers.some((p) => p.role === Role.SPYMASTER);
-
   return (
     <div className="min-h-dvh bg-felt p-3 sm:p-4">
       <div className="max-w-2xl mx-auto">
@@ -66,7 +54,7 @@ export function LobbyPage() {
             <div className="flex flex-wrap gap-2">
               {unassigned.map((p) => (
                 <span key={p.displayName} className="bg-white px-3 py-1.5 rounded-full text-sm font-medium">
-                  {p.displayName} {p.isHost && "👑"}
+                  {p.displayName}
                   {!p.isConnected && <span className="text-red-400 ml-1">(offline)</span>}
                 </span>
               ))}
@@ -74,49 +62,13 @@ export function LobbyPage() {
           </div>
         )}
 
-        {/* Settings (host only) */}
-        {player.isHost && (
-          <div className="bg-parchment rounded-xl p-3 sm:p-4 mb-4 sm:mb-6">
-            <h3 className="text-xs font-semibold text-gray-500 mb-3">GAME SETTINGS</h3>
-            <div className="flex items-center gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={lobby.timerEnabled}
-                  onChange={(e) => handleUpdateSettings(e.target.checked, lobby.timerDuration)}
-                  className="w-5 h-5"
-                />
-                <span className="text-sm font-medium">Turn Timer</span>
-              </label>
-              {lobby.timerEnabled && (
-                <select
-                  value={lobby.timerDuration}
-                  onChange={(e) => handleUpdateSettings(true, Number(e.target.value))}
-                  className="px-3 py-2 rounded-lg border bg-white text-sm font-medium"
-                >
-                  <option value={60}>60s</option>
-                  <option value={90}>90s</option>
-                  <option value={120}>120s</option>
-                  <option value={180}>180s</option>
-                </select>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Start Button (host only) */}
-        {player.isHost && (
-          <button
-            onClick={handleStart}
-            disabled={!canStart}
-            className={`w-full py-4 rounded-xl font-bold text-lg sm:text-xl transition-all active:scale-95
-                       ${canStart
-                         ? "bg-confirm text-white shadow-lg shadow-confirm/30 hover:bg-confirm-dark"
-                         : "bg-gray-300 text-gray-500 cursor-not-allowed"}`}
-          >
-            {canStart ? "START GAME" : "Each team needs a spymaster"}
-          </button>
-        )}
+        {/* Settings info (read-only for players) */}
+        <div className="bg-parchment rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 text-center">
+          <p className="text-sm text-gray-500">
+            Timer: {lobby.timerEnabled ? `${lobby.timerDuration}s per turn` : "Off"}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">Waiting for the host to start the game...</p>
+        </div>
       </div>
     </div>
   );
@@ -155,7 +107,7 @@ function TeamPanel({
         <p className="text-[10px] sm:text-xs text-gray-500 mb-1 font-semibold">SPYMASTER</p>
         {spymaster ? (
           <div className="bg-white px-3 py-2.5 rounded-lg text-sm font-semibold shadow-sm">
-            🕵️ {spymaster.displayName}
+            &#x1F575;&#xFE0F; {spymaster.displayName}
             {!spymaster.isConnected && <span className="text-red-400 ml-1">(offline)</span>}
           </div>
         ) : (
@@ -174,7 +126,7 @@ function TeamPanel({
         <div className="space-y-1.5">
           {operatives.map((p) => (
             <div key={p.displayName} className="bg-white px-3 py-2.5 rounded-lg text-sm font-medium shadow-sm">
-              🔍 {p.displayName}
+              &#x1F50D; {p.displayName}
               {!p.isConnected && <span className="text-red-400 ml-1">(offline)</span>}
             </div>
           ))}

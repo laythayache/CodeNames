@@ -7,7 +7,7 @@ import type {
   GameStatePayload, LobbyStatePayload, GameOverPayload,
   VotesUpdatedPayload, KalakGameStatePayload, KalakLobbyStatePayload,
   KalakGameOverPayload, KalakRoundResult, KalakHostDisplayPayload,
-  KalakPlayerScore, Player, GameType,
+  KalakPlayerScore, Player, GameType, CodenamesHostDisplayPayload,
 } from "shared/types";
 
 export function useSocketEvents(): void {
@@ -113,8 +113,8 @@ export function useSocketEvents(): void {
       dispatch({ type: "SET_KALAK_HOST_DISPLAY", payload: data });
     };
 
-    const onKalakLoading = (data: { loading: boolean }) => {
-      dispatch({ type: "SET_KALAK_LOADING", payload: data.loading });
+    const onKalakLoading = () => {
+      dispatch({ type: "SET_KALAK_LOADING", payload: true });
     };
 
     const onKalakLeaderboard = (data: { scores: KalakPlayerScore[] }) => {
@@ -129,12 +129,18 @@ export function useSocketEvents(): void {
       playSound(data.sound);
     };
 
-    const onKalakPlayerAnswered = (data: { playersAnswered: string[] }) => {
-      dispatch({ type: "SET_KALAK_PLAYERS_ANSWERED", payload: data.playersAnswered });
+    const onKalakPlayerAnswered = (data: { displayName: string }) => {
+      dispatch({ type: "SET_KALAK_PLAYERS_ANSWERED", payload: data.displayName });
     };
 
-    const onKalakPlayerVoted = (data: { playersVoted: string[] }) => {
-      dispatch({ type: "SET_KALAK_PLAYERS_VOTED", payload: data.playersVoted });
+    const onKalakPlayerVoted = (data: { displayName: string }) => {
+      dispatch({ type: "SET_KALAK_PLAYERS_VOTED", payload: data.displayName });
+    };
+
+    // ── Codenames host display ──
+
+    const onCodenamesHostDisplay = (data: CodenamesHostDisplayPayload) => {
+      dispatch({ type: "SET_CODENAMES_HOST_DISPLAY", payload: data });
     };
 
     // ── Register ──
@@ -161,6 +167,7 @@ export function useSocketEvents(): void {
     socket.on("server:kalak-sound", onKalakSound);
     socket.on("server:kalak-player-answered", onKalakPlayerAnswered);
     socket.on("server:kalak-player-voted", onKalakPlayerVoted);
+    socket.on("server:codenames-host-display", onCodenamesHostDisplay);
 
     return () => {
       socket.off("server:room-created", onRoomCreated);
@@ -185,6 +192,7 @@ export function useSocketEvents(): void {
       socket.off("server:kalak-sound", onKalakSound);
       socket.off("server:kalak-player-answered", onKalakPlayerAnswered);
       socket.off("server:kalak-player-voted", onKalakPlayerVoted);
+      socket.off("server:codenames-host-display", onCodenamesHostDisplay);
     };
   }, [dispatch, player]);
 }

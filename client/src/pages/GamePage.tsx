@@ -77,8 +77,6 @@ export function GamePage() {
         </div>
       </div>
 
-      {/* Admin Panel */}
-      {player.isHost && <AdminPanel isPaused={isPaused} gs={gs} />}
     </div>
   );
 }
@@ -425,69 +423,3 @@ function GameLog({ log }: { log: any[] }) {
   );
 }
 
-function AdminPanel({ isPaused, gs }: {
-  isPaused: boolean;
-  gs: NonNullable<ReturnType<typeof useGame>["state"]["gameState"]>;
-}) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div className="mt-2">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="w-full py-2 text-xs font-bold bg-parchment/30 text-parchment rounded-lg
-                   hover:bg-parchment/50 active:scale-95 transition-all"
-      >
-        {expanded ? "Hide Admin Controls" : "Admin Controls"}
-      </button>
-      {expanded && (
-        <div className="bg-parchment rounded-xl p-3 mt-1 flex gap-2 flex-wrap">
-          <button
-            onClick={() => getSocket().emit("client:admin-pause")}
-            className="px-4 py-2.5 bg-warning text-white rounded-lg text-sm font-bold
-                       shadow-md shadow-warning/25 hover:bg-warning-dark active:scale-95 transition-all"
-          >
-            {isPaused ? "Resume" : "Pause"}
-          </button>
-          <button
-            onClick={() => getSocket().emit("client:admin-skip-turn")}
-            className="px-4 py-2.5 bg-warning-dark text-white rounded-lg text-sm font-bold
-                       shadow-md hover:opacity-90 active:scale-95 transition-all"
-          >
-            Skip Turn
-          </button>
-          <button
-            onClick={() => {
-              if (confirm("End the game?")) {
-                getSocket().emit("client:admin-end-game");
-              }
-            }}
-            className="px-4 py-2.5 bg-danger text-white rounded-lg text-sm font-bold
-                       shadow-md shadow-danger/25 hover:bg-danger-dark active:scale-95 transition-all"
-          >
-            End Game
-          </button>
-          <select
-            onChange={(e) => {
-              if (e.target.value && confirm(`Kick ${e.target.value}?`)) {
-                getSocket().emit("client:admin-kick", { displayName: e.target.value });
-              }
-              e.target.value = "";
-            }}
-            className="px-3 py-2.5 rounded-lg border-2 text-sm bg-white font-medium"
-            defaultValue=""
-          >
-            <option value="" disabled>Kick player...</option>
-            {gs.players
-              .filter((p) => !p.isHost)
-              .map((p) => (
-                <option key={p.displayName} value={p.displayName}>
-                  {p.displayName}
-                </option>
-              ))}
-          </select>
-        </div>
-      )}
-    </div>
-  );
-}

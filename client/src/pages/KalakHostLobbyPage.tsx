@@ -4,6 +4,7 @@ import { usePlayer } from "../context/PlayerContext";
 import { getSocket } from "../socket";
 import { QRCodeSVG } from "qrcode.react";
 import { AvatarDisplay } from "../components/Avatar";
+import { useLanJoinUrl } from "../hooks/useLanUrl";
 import { KalakLanguage, DEFAULT_KALAK_TIMERS } from "shared/types";
 import type { KalakTimerConfig } from "shared/types";
 
@@ -29,7 +30,7 @@ export function KalakHostLobbyPage() {
   const roomCode = lobby.roomCode || player.roomCode;
   const connectedPlayers = lobby.players.filter((p) => p.isConnected);
   const canStart = connectedPlayers.length >= 3;
-  const joinUrl = `${window.location.origin}?room=${roomCode}`;
+  const joinUrl = useLanJoinUrl(roomCode);
 
   const emitSettings = (overrides: Partial<{
     language: KalakLanguage;

@@ -5,12 +5,16 @@ import { Game } from "../models/Game";
 import { KalakGame } from "../models/KalakGame";
 import { getTimerManager } from "./gameHandlers";
 
-function broadcastGameState(io: Server, game: Game): void {
+function broadcastCodenamesState(io: Server, game: Game): void {
   for (const p of game.players) {
     const sock = io.sockets.sockets.get(p.id);
     if (sock) {
       sock.emit("server:game-state", game.getGameStatePayload(p));
     }
+  }
+  if (game.hostDisplaySocketId) {
+    const hostSock = io.sockets.sockets.get(game.hostDisplaySocketId);
+    if (hostSock) hostSock.emit("server:codenames-host-display", game.getHostDisplayPayload());
   }
 }
 
@@ -20,12 +24,10 @@ export function registerAdminHandlers(
   gameManager: GameManager
 ): void {
   socket.on("client:admin-pause", () => {
-    const baseGame = gameManager.findGameBySocketId(socket.id);
+    // Only host display can pause/resume
+    const baseGame = gameManager.findGameByHostDisplaySocket(socket.id);
     if (!baseGame || baseGame.gameType !== GameType.CODENAMES) return;
     const game = baseGame as Game;
-
-    const player = game.findPlayerBySocketId(socket.id);
-    if (!player?.isHost) return;
 
     const timerManager = getTimerManager();
 
@@ -36,36 +38,25 @@ export function registerAdminHandlers(
       game.phase = GamePhase.PLAYING;
       if (game.timerEnabled) {
         timerManager.resume(io, game.roomCode, () => {
+          if (game.phase !== GamePhase.PLAYING) return;
           game.passTurn();
-          broadcastGameState(io, game);
+          broadcastCodenamesState(io, game);
         });
       }
     }
 
     io.to(game.roomCode).emit("server:game-paused", { paused: game.phase === GamePhase.PAUSED });
-    broadcastGameState(io, game);
+    broadcastCodenamesState(io, game);
   });
 
   socket.on("client:admin-kick", (data: KickPlayerPayload) => {
-    // Check both player host and host display socket
-    let baseGame = gameManager.findGameBySocketId(socket.id);
-    if (!baseGame) {
-      baseGame = gameManager.findGameByHostDisplaySocket(socket.id) ?? undefined;
-    }
+    // Check host display socket for both game types
+    let baseGame = gameManager.findGameByHostDisplaySocket(socket.id);
     if (!baseGame) return;
 
-    // For Kalak, host display can kick. For Codenames, player host can kick.
-    if (baseGame.gameType === GameType.KALAK) {
-      if (baseGame.hostDisplaySocketId !== socket.id) return;
-    } else {
-      const player = baseGame.findPlayerBySocketId(socket.id);
-      if (!player?.isHost) return;
-    }
-
     const target = baseGame.findPlayerByName(data.displayName);
-    if (!target || target.isHost) return;
+    if (!target) return;
 
-    // Disconnect the kicked player's socket
     const targetSocket = io.sockets.sockets.get(target.id);
     if (targetSocket) {
       targetSocket.emit("server:player-kicked", { displayName: data.displayName });
@@ -73,6 +64,8 @@ export function registerAdminHandlers(
       targetSocket.disconnect(true);
     }
 
+    // Clean up votes/answers before removing player
+    baseGame.removeVotesForPlayer(data.displayName);
     baseGame.removePlayer(data.displayName);
 
     if (baseGame.phase === GamePhase.LOBBY) {
@@ -82,7 +75,7 @@ export function registerAdminHandlers(
         io.to(baseGame.roomCode).emit("server:lobby-state", baseGame.getLobbyState());
       }
     } else if (baseGame.gameType === GameType.CODENAMES) {
-      broadcastGameState(io, baseGame as Game);
+      broadcastCodenamesState(io, baseGame as Game);
     } else {
       const kg = baseGame as KalakGame;
       for (const p of kg.players) {
@@ -95,26 +88,20 @@ export function registerAdminHandlers(
   });
 
   socket.on("client:admin-skip-turn", () => {
-    const baseGame = gameManager.findGameBySocketId(socket.id);
+    const baseGame = gameManager.findGameByHostDisplaySocket(socket.id);
     if (!baseGame || baseGame.gameType !== GameType.CODENAMES) return;
     const game = baseGame as Game;
     if (game.phase !== GamePhase.PLAYING && game.phase !== GamePhase.PAUSED) return;
 
-    const player = game.findPlayerBySocketId(socket.id);
-    if (!player?.isHost) return;
-
     const timerManager = getTimerManager();
     timerManager.stop(game.roomCode);
     game.passTurn();
-    broadcastGameState(io, game);
+    broadcastCodenamesState(io, game);
   });
 
   socket.on("client:admin-end-game", () => {
-    const baseGame = gameManager.findGameBySocketId(socket.id);
+    const baseGame = gameManager.findGameByHostDisplaySocket(socket.id);
     if (!baseGame) return;
-
-    const player = baseGame.findPlayerBySocketId(socket.id);
-    if (!player?.isHost) return;
 
     const timerManager = getTimerManager();
     timerManager.stop(baseGame.roomCode);
@@ -130,7 +117,7 @@ export function registerAdminHandlers(
         board: game.board,
         stats: game.getStats(),
       });
-      broadcastGameState(io, game);
+      broadcastCodenamesState(io, game);
     } else {
       const kg = baseGame as KalakGame;
       io.to(kg.roomCode).emit("server:kalak-game-over", kg.getGameOverPayload());

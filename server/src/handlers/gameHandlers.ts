@@ -9,20 +9,30 @@ import {
 const timerManager = new TimerManager();
 
 function getCodenamesGame(gameManager: GameManager, socketId: string): Game | null {
+  // Check player socket first
   const game = gameManager.findGameBySocketId(socketId);
-  if (!game || game.gameType !== GameType.CODENAMES) return null;
-  return game as Game;
+  if (game && game.gameType === GameType.CODENAMES) return game as Game;
+
+  // Check host display socket
+  const hostGame = gameManager.findGameByHostDisplaySocket(socketId);
+  if (hostGame && hostGame.gameType === GameType.CODENAMES) return hostGame as Game;
+
+  return null;
 }
 
-function broadcastGameState(io: Server, gameManager: GameManager, roomCode: string): void {
-  const game = gameManager.getCodenamesGame(roomCode);
-  if (!game) return;
-
+function broadcastGameState(io: Server, game: Game): void {
+  // Send personalized state to each player
   for (const p of game.players) {
     const sock = io.sockets.sockets.get(p.id);
     if (sock) {
       sock.emit("server:game-state", game.getGameStatePayload(p));
     }
+  }
+
+  // Send host display payload
+  if (game.hostDisplaySocketId) {
+    const hostSock = io.sockets.sockets.get(game.hostDisplaySocketId);
+    if (hostSock) hostSock.emit("server:codenames-host-display", game.getHostDisplayPayload());
   }
 }
 
@@ -42,15 +52,15 @@ export function registerGameHandlers(
     const success = game.giveClue(socket.id, data.word, data.number);
     if (!success) return;
 
-    // Start timer if enabled
     if (game.timerEnabled) {
       timerManager.start(io, game.roomCode, game.timerDuration, () => {
+        if (game.phase !== GamePhase.PLAYING) return;
         game.passTurn();
-        broadcastGameState(io, gameManager, game.roomCode);
+        broadcastGameState(io, game);
       });
     }
 
-    broadcastGameState(io, gameManager, game.roomCode);
+    broadcastGameState(io, game);
   });
 
   socket.on("client:vote-card", (data: VoteCardPayload) => {
@@ -68,23 +78,19 @@ export function registerGameHandlers(
   socket.on("client:confirm-guess", (data: ConfirmGuessPayload) => {
     const game = getCodenamesGame(gameManager, socket.id);
     if (!game || game.phase !== GamePhase.PLAYING) return;
-    // Must be in guessing phase
     if (game.turnPhase !== TurnPhase.GUESSING) return;
 
     const player = game.findPlayerBySocketId(socket.id);
     if (!player || player.team !== game.currentTurn) return;
 
-    // In normal mode, only operatives can confirm. In 1v1, spymaster can.
     const isOneVOne = game.getTeamOperatives(game.currentTurn).length === 0;
     if (player.role !== Role.OPERATIVE && !isOneVOne) return;
 
-    // Verify majority
     const majorityPos = game.getMajorityPosition();
     if (majorityPos === null || majorityPos !== data.position) return;
 
     const result = game.revealCard(data.position);
 
-    // Broadcast updated votes (cleared after reveal)
     io.to(game.roomCode).emit("server:votes-updated", {
       votes: game.getVotesPayload(),
     });
@@ -99,35 +105,34 @@ export function registerGameHandlers(
       });
     }
 
-    broadcastGameState(io, gameManager, game.roomCode);
+    broadcastGameState(io, game);
   });
 
   socket.on("client:pass-turn", () => {
     const game = getCodenamesGame(gameManager, socket.id);
     if (!game || game.phase !== GamePhase.PLAYING) return;
-    // Must be in guessing phase
     if (game.turnPhase !== TurnPhase.GUESSING) return;
 
     const player = game.findPlayerBySocketId(socket.id);
     if (!player || player.team !== game.currentTurn) return;
 
-    // In normal mode, only operatives can pass. In 1v1, spymaster can.
     const isOneVOne = game.getTeamOperatives(game.currentTurn).length === 0;
     if (player.role !== Role.OPERATIVE && !isOneVOne) return;
 
     timerManager.stop(game.roomCode);
     game.passTurn();
-    broadcastGameState(io, gameManager, game.roomCode);
+    broadcastGameState(io, game);
   });
 
   socket.on("client:rematch", () => {
-    const game = getCodenamesGame(gameManager, socket.id);
-    if (!game) return;
+    // Only host display can rematch
+    const game = gameManager.findGameByHostDisplaySocket(socket.id);
+    if (!game || game.gameType !== GameType.CODENAMES) return;
 
-    const player = game.findPlayerBySocketId(socket.id);
-    if (!player?.isHost) return;
+    const cg = game as Game;
+    cg.rematch();
 
-    game.rematch();
-    broadcastGameState(io, gameManager, game.roomCode);
+    // Back to lobby — broadcast lobby state to all players + host display
+    io.to(game.roomCode).emit("server:lobby-state", cg.getLobbyState());
   });
 }

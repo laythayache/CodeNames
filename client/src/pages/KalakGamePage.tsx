@@ -31,11 +31,11 @@ export function KalakGamePage() {
           <div className="bg-parchment rounded-lg px-3 py-1.5 text-sm font-bold text-wood-dark">
             Round {gs.currentRound} / {gs.totalRounds}
           </div>
-          {gs.timerSeconds !== null && (
+          {state.timerSeconds !== null && (
             <div className={`bg-parchment rounded-lg px-3 py-1.5 text-sm font-bold
-              ${gs.timerSeconds <= 10 ? "text-red-600 animate-pulse" : "text-wood-dark"}`}
+              ${state.timerSeconds <= 10 ? "text-red-600 animate-pulse" : "text-wood-dark"}`}
             >
-              {gs.timerSeconds}s
+              {state.timerSeconds}s
             </div>
           )}
         </div>
@@ -145,9 +145,11 @@ function AnsweringPhase({ playersAnswered, myName, allPlayers, answerRejected, o
   };
 
   // Update submitted state if server says we already answered
-  if (playersAnswered.includes(myName) && !submitted && !answerRejected) {
-    setSubmitted(true);
-  }
+  useEffect(() => {
+    if (playersAnswered.includes(myName) && !submitted && !answerRejected) {
+      setSubmitted(true);
+    }
+  }, [playersAnswered, myName, submitted, answerRejected]);
 
   return (
     <div className="space-y-4">
@@ -235,9 +237,11 @@ function VotingPhase({ answers, playersVoted, myName, allPlayers }: {
   };
 
   // Sync if server says we voted
-  if (playersVoted.includes(myName) && !votedId) {
-    setVotedId("unknown");
-  }
+  useEffect(() => {
+    if (playersVoted.includes(myName) && !votedId) {
+      setVotedId("unknown");
+    }
+  }, [playersVoted, myName, votedId]);
 
   return (
     <div className="space-y-4">

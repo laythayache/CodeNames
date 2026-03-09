@@ -13,6 +13,9 @@ import { KalakGameOverPage } from "./pages/KalakGameOverPage";
 import { KalakHostLobbyPage } from "./pages/KalakHostLobbyPage";
 import { KalakHostGamePage } from "./pages/KalakHostGamePage";
 import { KalakHostGameOverPage } from "./pages/KalakHostGameOverPage";
+import { CodenamesHostLobbyPage } from "./pages/CodenamesHostLobbyPage";
+import { CodenamesHostGamePage } from "./pages/CodenamesHostGamePage";
+import { CodenamesHostGameOverPage } from "./pages/CodenamesHostGameOverPage";
 import { JoinPage } from "./pages/JoinPage";
 import { disconnectSocket, getSocket } from "./socket";
 
@@ -30,7 +33,6 @@ function KickedPage() {
             disconnectSocket();
             player.reset();
             dispatch({ type: "RESET" });
-            // Clear room param from URL
             window.history.replaceState({}, "", window.location.pathname);
           }}
           className="px-6 py-3 bg-wood text-white rounded-lg font-semibold hover:bg-wood-dark"
@@ -68,8 +70,7 @@ function AppContent() {
   const params = new URLSearchParams(window.location.search);
   const roomParam = params.get("room");
 
-  if (roomParam && !player.roomCode) {
-    // Player is scanning QR but hasn't joined yet
+  if (roomParam && (!player.roomCode || player.roomCode !== roomParam.toUpperCase())) {
     return <JoinPage />;
   }
 
@@ -80,15 +81,20 @@ function AppContent() {
 
   // ── Host display routing (laptop/TV screen) ──
   if (player.isHostDisplay) {
-    if (state.kalakGameOver) {
-      return <KalakHostGameOverPage />;
+    const gameType = state.gameType ?? player.gameType;
+
+    if (gameType === GameType.KALAK) {
+      // Kalak host display
+      if (state.kalakGameOver) return <KalakHostGameOverPage />;
+      if (state.kalakHostDisplay) return <KalakHostGamePage />;
+      if (state.kalakLobbyState) return <KalakHostLobbyPage />;
+    } else {
+      // Codenames host display
+      if (state.gameOver) return <CodenamesHostGameOverPage />;
+      if (state.codenamesHostDisplay) return <CodenamesHostGamePage />;
+      if (state.lobbyState) return <CodenamesHostLobbyPage />;
     }
-    if (state.kalakHostDisplay) {
-      return <KalakHostGamePage />;
-    }
-    if (state.kalakLobbyState) {
-      return <KalakHostLobbyPage />;
-    }
+
     // Host display waiting for room creation to complete
     return <HomePage />;
   }
@@ -123,7 +129,7 @@ function AppContent() {
     return <LobbyPage />;
   }
 
-  // ── Default → HomePage (Codenames create/join or Kalak host setup) ──
+  // ── Default → HomePage ──
   return <HomePage />;
 }
 

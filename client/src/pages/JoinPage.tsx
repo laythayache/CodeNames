@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { usePlayer } from "../context/PlayerContext";
 import { useGame } from "../context/GameContext";
-import { connectSocket, getSocket } from "../socket";
+import { connectSocket, disconnectSocket, getSocket } from "../socket";
 import { AvatarBuilder } from "../components/AvatarBuilder";
 import { AvatarDisplay } from "../components/Avatar";
 import type { Avatar } from "shared/types";
@@ -22,10 +22,22 @@ type Step = "name" | "avatar" | "ready";
 
 export function JoinPage() {
   const player = usePlayer();
+  const { dispatch } = useGame();
 
   // Parse room code from URL
   const params = new URLSearchParams(window.location.search);
   const roomCode = (params.get("room") || "").toUpperCase();
+
+  // If switching rooms, clean up old connection/state
+  useEffect(() => {
+    const savedRoom = localStorage.getItem("codenames:roomCode");
+    if (savedRoom && savedRoom !== roomCode) {
+      disconnectSocket();
+      player.reset();
+      dispatch({ type: "RESET" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Pre-fill from localStorage if returning player
   const [name, setName] = useState(player.displayName || "");
@@ -46,7 +58,8 @@ export function JoinPage() {
       setJoining(true);
       setName(savedName);
       const savedAvatarStr = localStorage.getItem("codenames:avatar");
-      const savedAvatar = savedAvatarStr ? JSON.parse(savedAvatarStr) : avatar;
+      let savedAvatar = avatar;
+      try { if (savedAvatarStr) savedAvatar = JSON.parse(savedAvatarStr); } catch { /* use default */ }
       setAvatar(savedAvatar);
 
       connectSocket(savedName, roomCode);

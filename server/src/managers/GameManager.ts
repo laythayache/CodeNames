@@ -1,4 +1,4 @@
-import { Avatar, GameType } from "shared/types";
+import { GameType } from "shared/types";
 import { Game } from "../models/Game";
 import { KalakGame } from "../models/KalakGame";
 import type { BaseGame } from "../models/BaseGame";
@@ -25,26 +25,27 @@ export class GameManager {
   }
 
   /**
-   * Create a Codenames game (host IS a player).
+   * Create a Codenames game with host display (laptop is NOT a player).
    */
-  createCodenamesRoom(hostSocketId: string, hostName: string): Game {
+  createCodenamesRoom(hostDisplaySocketId: string): Game {
     const existingCodes = new Set(this.games.keys());
     const roomCode = generateRoomCode(existingCodes);
     const game = new Game(roomCode);
-    game.addPlayer(hostSocketId, hostName, true);
+    game.hostDisplaySocketId = hostDisplaySocketId;
     this.games.set(roomCode, game);
-    console.log(`Codenames room created: ${roomCode} by ${hostName}`);
+    this.hostDisplaySockets.set(hostDisplaySocketId, roomCode);
+    console.log(`Codenames room created: ${roomCode} (host display: ${hostDisplaySocketId})`);
     return game;
   }
 
   /**
    * Legacy createGame for backward compatibility.
    */
-  createGame(hostSocketId: string, hostName: string, gameType: GameType = GameType.CODENAMES): BaseGame {
+  createGame(hostSocketId: string, _hostName: string, gameType: GameType = GameType.CODENAMES): BaseGame {
     if (gameType === GameType.KALAK) {
       return this.createKalakRoom(hostSocketId);
     }
-    return this.createCodenamesRoom(hostSocketId, hostName);
+    return this.createCodenamesRoom(hostSocketId);
   }
 
   getGame(roomCode: string): BaseGame | undefined {

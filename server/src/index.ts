@@ -49,6 +49,14 @@ io.on("connection", (socket) => {
   registerKalakHandlers(io, socket, gameManager, timerManager);
 });
 
+server.on("error", (err: NodeJS.ErrnoException) => {
+  if (err.code === "EADDRINUSE") {
+    console.error(`Port ${PORT} is already in use. Kill the other process or use a different port.`);
+    process.exit(1);
+  }
+  throw err;
+});
+
 server.listen(PORT, "0.0.0.0", () => {
   const lanIp = getLanIp();
   console.log(`Game server running on http://0.0.0.0:${PORT}`);

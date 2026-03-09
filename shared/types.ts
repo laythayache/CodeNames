@@ -114,9 +114,28 @@ export interface GameStatePayload {
 }
 
 export interface LobbyStatePayload {
+  roomCode: string;
   players: Player[];
   timerEnabled: boolean;
   timerDuration: number;
+}
+
+export interface CodenamesHostDisplayPayload {
+  roomCode: string;
+  phase: GamePhase;
+  players: Player[];
+  board: CardPayload[];  // all types visible (spymaster view)
+  currentTurn: Team;
+  turnPhase: TurnPhase;
+  currentClue: Clue | null;
+  guessesRemaining: number;
+  log: LogEntry[];
+  winner: Team | null;
+  redRemaining: number;
+  blueRemaining: number;
+  timerEnabled: boolean;
+  timerDuration: number;
+  votes: Record<number, string[]>;
 }
 
 // ── Socket Event Payloads ──

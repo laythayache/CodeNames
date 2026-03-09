@@ -1,6 +1,5 @@
 import { useGame } from "../context/GameContext";
 import { usePlayer } from "../context/PlayerContext";
-import { getSocket } from "../socket";
 import { CardType, Team } from "shared/types";
 
 export function GameOverPage() {
@@ -103,9 +102,9 @@ export function GameOverPage() {
                   {entry.type === "CLUE" && (
                     <span>Clue: <strong>{entry.details.clue?.word}</strong> {entry.details.clue?.number}</span>
                   )}
-                  {entry.type === "GUESS_CORRECT" && <span className="text-confirm font-semibold">✓ {entry.details.cardWord}</span>}
-                  {entry.type === "GUESS_WRONG" && <span className="text-warning-dark font-semibold">✗ {entry.details.cardWord}</span>}
-                  {entry.type === "GUESS_ASSASSIN" && <span className="text-danger font-bold">☠ {entry.details.cardWord}</span>}
+                  {entry.type === "GUESS_CORRECT" && <span className="text-confirm font-semibold">&#x2713; {entry.details.cardWord}</span>}
+                  {entry.type === "GUESS_WRONG" && <span className="text-warning-dark font-semibold">&#x2717; {entry.details.cardWord}</span>}
+                  {entry.type === "GUESS_ASSASSIN" && <span className="text-danger font-bold">&#x2620; {entry.details.cardWord}</span>}
                   {entry.type === "PASS" && <span className="text-gray-500">Passed</span>}
                 </div>
               ))}
@@ -113,16 +112,10 @@ export function GameOverPage() {
           </div>
         )}
 
-        {/* Rematch */}
-        {player.isHost && (
-          <button
-            onClick={() => getSocket().emit("client:rematch")}
-            className="w-full py-4 bg-confirm text-white rounded-xl font-bold text-lg sm:text-xl
-                       shadow-lg shadow-confirm/30 hover:bg-confirm-dark active:scale-95 transition-all"
-          >
-            REMATCH
-          </button>
-        )}
+        {/* Waiting for host */}
+        <div className="bg-parchment rounded-xl p-4 text-center">
+          <p className="text-sm text-gray-500">Waiting for host to start a new game...</p>
+        </div>
       </div>
     </div>
   );

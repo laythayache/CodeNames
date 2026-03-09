@@ -1,5 +1,5 @@
 import {
-  Card, CardPayload, CardType, Clue, GamePhase, GameStatePayload,
+  Card, CardPayload, CardType, Clue, CodenamesHostDisplayPayload, GamePhase, GameStatePayload,
   GameStats, GameType, LogEntry, LobbyStatePayload, Player, Role, Team, TurnPhase,
 } from "shared/types";
 import { generateBoard } from "../utils/boardGenerator";
@@ -342,9 +342,39 @@ export class Game implements BaseGame {
 
   getLobbyState(): LobbyStatePayload {
     return {
+      roomCode: this.roomCode,
       players: this.players,
       timerEnabled: this.timerEnabled,
       timerDuration: this.timerDuration,
+    };
+  }
+
+  getHostDisplayPayload(): CodenamesHostDisplayPayload {
+    const votesMap = this.getVotesPayload();
+    const board: CardPayload[] = this.board.map((card) => ({
+      word: card.word,
+      type: card.revealed ? card.type : undefined, // host does NOT see unrevealed types
+      revealed: card.revealed,
+      position: card.position,
+      votes: votesMap[card.position] || [],
+    }));
+
+    return {
+      roomCode: this.roomCode,
+      phase: this.phase,
+      players: this.players,
+      board,
+      currentTurn: this.currentTurn,
+      turnPhase: this.turnPhase,
+      currentClue: this.currentClue,
+      guessesRemaining: this.guessesRemaining,
+      log: this.log,
+      winner: this.winner,
+      redRemaining: this.redRemaining,
+      blueRemaining: this.blueRemaining,
+      timerEnabled: this.timerEnabled,
+      timerDuration: this.timerDuration,
+      votes: votesMap,
     };
   }
 
@@ -357,11 +387,11 @@ export class Game implements BaseGame {
     };
   }
 
-  // ── Rematch ──
+  // ── Rematch — return to lobby so players can switch teams ──
 
   rematch(): void {
-    this.board = generateBoard();
-    this.phase = GamePhase.PLAYING;
+    this.phase = GamePhase.LOBBY;
+    this.board = [];
     this.currentTurn = Team.RED;
     this.turnPhase = TurnPhase.GIVING_CLUE;
     this.currentClue = null;
@@ -370,7 +400,13 @@ export class Game implements BaseGame {
     this.winner = null;
     this.turnsPlayed = 0;
     this.currentVotes.clear();
-    this.redRemaining = this.board.filter((c) => c.type === CardType.RED).length;
-    this.blueRemaining = this.board.filter((c) => c.type === CardType.BLUE).length;
+    this.redRemaining = 0;
+    this.blueRemaining = 0;
+
+    // Reset team/role so players can re-pick
+    for (const p of this.players) {
+      p.team = null;
+      p.role = null;
+    }
   }
 }

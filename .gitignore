@@ -4,3 +4,4 @@ dist/
 *.tsbuildinfo
 .vite/
 .env
+data/questionCache.json

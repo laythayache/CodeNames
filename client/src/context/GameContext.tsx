@@ -3,7 +3,7 @@ import {
   type GameStatePayload, type LobbyStatePayload, type GameOverPayload,
   type VotesUpdatedPayload, type KalakGameStatePayload, type KalakLobbyStatePayload,
   type KalakGameOverPayload, type KalakRoundResult, type KalakHostDisplayPayload,
-  type KalakPlayerScore,
+  type KalakPlayerScore, type CodenamesHostDisplayPayload,
   GamePhase, GameType, TurnPhase, Team,
 } from "shared/types";
 
@@ -23,6 +23,8 @@ interface GameState {
   kalakLoading: boolean;
   kalakLeaderboard: KalakPlayerScore[] | null;
   kalakAnswerRejected: boolean;
+  // Codenames host display
+  codenamesHostDisplay: CodenamesHostDisplayPayload | null;
   // Shared
   timerSeconds: number | null;
   kicked: boolean;
@@ -42,8 +44,9 @@ type GameAction =
   | { type: "SET_KALAK_LOADING"; payload: boolean }
   | { type: "SET_KALAK_LEADERBOARD"; payload: KalakPlayerScore[] }
   | { type: "SET_KALAK_ANSWER_REJECTED"; payload: boolean }
-  | { type: "SET_KALAK_PLAYERS_ANSWERED"; payload: string[] }
-  | { type: "SET_KALAK_PLAYERS_VOTED"; payload: string[] }
+  | { type: "SET_KALAK_PLAYERS_ANSWERED"; payload: string }
+  | { type: "SET_KALAK_PLAYERS_VOTED"; payload: string }
+  | { type: "SET_CODENAMES_HOST_DISPLAY"; payload: CodenamesHostDisplayPayload }
   | { type: "SET_TIMER"; payload: number }
   | { type: "TIMER_EXPIRED" }
   | { type: "KICKED" }
@@ -63,6 +66,7 @@ const initialState: GameState = {
   kalakLoading: false,
   kalakLeaderboard: null,
   kalakAnswerRejected: false,
+  codenamesHostDisplay: null,
   timerSeconds: null,
   kicked: false,
 };
@@ -78,35 +82,62 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, gameState: action.payload, votes: turnChanged ? {} : state.votes };
     }
     case "SET_LOBBY_STATE":
-      return { ...state, lobbyState: action.payload };
+      return { ...state, lobbyState: action.payload, gameOver: null, codenamesHostDisplay: null, gameState: null };
     case "SET_GAME_OVER":
       return { ...state, gameOver: action.payload };
     case "SET_VOTES":
       return { ...state, votes: action.payload.votes };
     case "SET_KALAK_GAME_STATE":
-      return { ...state, kalakState: action.payload, kalakRoundResult: null };
+      return { ...state, kalakState: action.payload, kalakGameOver: null, kalakRoundResult: null, kalakLoading: false };
     case "SET_KALAK_LOBBY_STATE":
-      return { ...state, kalakLobbyState: action.payload };
+      return {
+        ...state,
+        kalakLobbyState: action.payload,
+        kalakGameOver: null,
+        kalakState: null,
+        kalakHostDisplay: null,
+        kalakLeaderboard: null,
+        kalakRoundResult: null,
+        kalakLoading: false,
+      };
     case "SET_KALAK_GAME_OVER":
-      return { ...state, kalakGameOver: action.payload };
+      return { ...state, kalakGameOver: action.payload, kalakLeaderboard: null };
     case "SET_KALAK_ROUND_RESULT":
       return { ...state, kalakRoundResult: action.payload };
     case "SET_KALAK_HOST_DISPLAY":
-      return { ...state, kalakHostDisplay: action.payload };
+      return { ...state, kalakHostDisplay: action.payload, kalakGameOver: null };
     case "SET_KALAK_LOADING":
       return { ...state, kalakLoading: action.payload };
     case "SET_KALAK_LEADERBOARD":
       return { ...state, kalakLeaderboard: action.payload };
     case "SET_KALAK_ANSWER_REJECTED":
       return { ...state, kalakAnswerRejected: action.payload };
-    case "SET_KALAK_PLAYERS_ANSWERED":
-      return state.kalakHostDisplay
-        ? { ...state, kalakHostDisplay: { ...state.kalakHostDisplay, playersAnswered: action.payload } }
-        : state;
-    case "SET_KALAK_PLAYERS_VOTED":
-      return state.kalakHostDisplay
-        ? { ...state, kalakHostDisplay: { ...state.kalakHostDisplay, playersVoted: action.payload } }
-        : state;
+    case "SET_KALAK_PLAYERS_ANSWERED": {
+      const name = action.payload;
+      let next = state;
+      // Update host display
+      if (next.kalakHostDisplay && !next.kalakHostDisplay.playersAnswered.includes(name)) {
+        next = { ...next, kalakHostDisplay: { ...next.kalakHostDisplay, playersAnswered: [...next.kalakHostDisplay.playersAnswered, name] } };
+      }
+      // Update player state
+      if (next.kalakState && !next.kalakState.playersAnswered.includes(name)) {
+        next = { ...next, kalakState: { ...next.kalakState, playersAnswered: [...next.kalakState.playersAnswered, name] } };
+      }
+      return next;
+    }
+    case "SET_KALAK_PLAYERS_VOTED": {
+      const name = action.payload;
+      let next = state;
+      if (next.kalakHostDisplay && !next.kalakHostDisplay.playersVoted.includes(name)) {
+        next = { ...next, kalakHostDisplay: { ...next.kalakHostDisplay, playersVoted: [...next.kalakHostDisplay.playersVoted, name] } };
+      }
+      if (next.kalakState && !next.kalakState.playersVoted.includes(name)) {
+        next = { ...next, kalakState: { ...next.kalakState, playersVoted: [...next.kalakState.playersVoted, name] } };
+      }
+      return next;
+    }
+    case "SET_CODENAMES_HOST_DISPLAY":
+      return { ...state, codenamesHostDisplay: action.payload };
     case "SET_TIMER":
       return { ...state, timerSeconds: action.payload };
     case "TIMER_EXPIRED":
