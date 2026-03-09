@@ -1,41 +1,62 @@
 import { createContext, useContext, useReducer, type ReactNode } from "react";
 import {
   type GameStatePayload, type LobbyStatePayload, type GameOverPayload,
-  type VotesUpdatedPayload, GamePhase, TurnPhase, Team,
+  type VotesUpdatedPayload, type KalakGameStatePayload, type KalakLobbyStatePayload,
+  type KalakGameOverPayload, type KalakRoundResult,
+  GamePhase, GameType, TurnPhase, Team,
 } from "shared/types";
 
 interface GameState {
+  gameType: GameType | null;
+  // Codenames
   gameState: GameStatePayload | null;
   lobbyState: LobbyStatePayload | null;
   gameOver: GameOverPayload | null;
   votes: Record<number, string[]>;
+  // Kalak
+  kalakState: KalakGameStatePayload | null;
+  kalakLobbyState: KalakLobbyStatePayload | null;
+  kalakGameOver: KalakGameOverPayload | null;
+  kalakRoundResult: KalakRoundResult | null;
+  // Shared
   timerSeconds: number | null;
   kicked: boolean;
 }
 
 type GameAction =
+  | { type: "SET_GAME_TYPE"; payload: GameType }
   | { type: "SET_GAME_STATE"; payload: GameStatePayload }
   | { type: "SET_LOBBY_STATE"; payload: LobbyStatePayload }
   | { type: "SET_GAME_OVER"; payload: GameOverPayload }
   | { type: "SET_VOTES"; payload: VotesUpdatedPayload }
+  | { type: "SET_KALAK_GAME_STATE"; payload: KalakGameStatePayload }
+  | { type: "SET_KALAK_LOBBY_STATE"; payload: KalakLobbyStatePayload }
+  | { type: "SET_KALAK_GAME_OVER"; payload: KalakGameOverPayload }
+  | { type: "SET_KALAK_ROUND_RESULT"; payload: KalakRoundResult }
   | { type: "SET_TIMER"; payload: number }
   | { type: "TIMER_EXPIRED" }
   | { type: "KICKED" }
   | { type: "RESET" };
 
 const initialState: GameState = {
+  gameType: null,
   gameState: null,
   lobbyState: null,
   gameOver: null,
   votes: {},
+  kalakState: null,
+  kalakLobbyState: null,
+  kalakGameOver: null,
+  kalakRoundResult: null,
   timerSeconds: null,
   kicked: false,
 };
 
 function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
+    case "SET_GAME_TYPE":
+      return { ...state, gameType: action.payload };
     case "SET_GAME_STATE": {
-      // Only reset votes if the turn or phase changed (not on every state broadcast)
       const turnChanged = state.gameState &&
         (state.gameState.currentTurn !== action.payload.currentTurn ||
          state.gameState.turnPhase !== action.payload.turnPhase);
@@ -47,6 +68,14 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, gameOver: action.payload };
     case "SET_VOTES":
       return { ...state, votes: action.payload.votes };
+    case "SET_KALAK_GAME_STATE":
+      return { ...state, kalakState: action.payload, kalakRoundResult: null };
+    case "SET_KALAK_LOBBY_STATE":
+      return { ...state, kalakLobbyState: action.payload };
+    case "SET_KALAK_GAME_OVER":
+      return { ...state, kalakGameOver: action.payload };
+    case "SET_KALAK_ROUND_RESULT":
+      return { ...state, kalakRoundResult: action.payload };
     case "SET_TIMER":
       return { ...state, timerSeconds: action.payload };
     case "TIMER_EXPIRED":
@@ -83,6 +112,9 @@ export function useGame() {
 // Convenience selectors
 export function useGamePhase(): GamePhase | null {
   const { state } = useGame();
+  if (state.gameType === GameType.KALAK) {
+    return state.kalakState?.phase ?? (state.kalakLobbyState ? GamePhase.LOBBY : null);
+  }
   return state.gameState?.phase ?? (state.lobbyState ? GamePhase.LOBBY : null);
 }
 

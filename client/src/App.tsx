@@ -1,11 +1,14 @@
 import { useSocketEvents } from "./hooks/useSocket";
 import { useGame } from "./context/GameContext";
 import { usePlayer } from "./context/PlayerContext";
-import { GamePhase } from "shared/types";
+import { GamePhase, GameType } from "shared/types";
 import { HomePage } from "./pages/HomePage";
 import { LobbyPage } from "./pages/LobbyPage";
 import { GamePage } from "./pages/GamePage";
 import { GameOverPage } from "./pages/GameOverPage";
+import { KalakLobbyPage } from "./pages/KalakLobbyPage";
+import { KalakGamePage } from "./pages/KalakGamePage";
+import { KalakGameOverPage } from "./pages/KalakGameOverPage";
 import { disconnectSocket } from "./socket";
 
 function AppContent() {
@@ -36,7 +39,22 @@ function AppContent() {
     );
   }
 
-  // Determine which page to show based on phase
+  // ── Kalak routing ──
+  if (state.gameType === GameType.KALAK || player.gameType === GameType.KALAK) {
+    const kalakPhase = state.kalakState?.phase;
+
+    if (kalakPhase === GamePhase.GAME_OVER || state.kalakGameOver) {
+      return <KalakGameOverPage />;
+    }
+    if (kalakPhase === GamePhase.PLAYING) {
+      return <KalakGamePage />;
+    }
+    if (state.kalakLobbyState && player.roomCode) {
+      return <KalakLobbyPage />;
+    }
+  }
+
+  // ── Codenames routing ──
   const phase = state.gameState?.phase;
 
   if (phase === GamePhase.GAME_OVER || state.gameOver) {

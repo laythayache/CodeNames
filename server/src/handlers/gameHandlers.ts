@@ -1,14 +1,21 @@
 import { Server, Socket } from "socket.io";
 import { GameManager } from "../managers/GameManager";
 import { TimerManager } from "../managers/TimerManager";
+import { Game } from "../models/Game";
 import {
-  ConfirmGuessPayload, GamePhase, GiveCluePayload, Role, TurnPhase, VoteCardPayload,
+  ConfirmGuessPayload, GamePhase, GameType, GiveCluePayload, Role, TurnPhase, VoteCardPayload,
 } from "shared/types";
 
 const timerManager = new TimerManager();
 
+function getCodenamesGame(gameManager: GameManager, socketId: string): Game | null {
+  const game = gameManager.findGameBySocketId(socketId);
+  if (!game || game.gameType !== GameType.CODENAMES) return null;
+  return game as Game;
+}
+
 function broadcastGameState(io: Server, gameManager: GameManager, roomCode: string): void {
-  const game = gameManager.getGame(roomCode);
+  const game = gameManager.getCodenamesGame(roomCode);
   if (!game) return;
 
   for (const p of game.players) {
@@ -29,7 +36,7 @@ export function registerGameHandlers(
   gameManager: GameManager
 ): void {
   socket.on("client:give-clue", (data: GiveCluePayload) => {
-    const game = gameManager.findGameBySocketId(socket.id);
+    const game = getCodenamesGame(gameManager, socket.id);
     if (!game || game.phase !== GamePhase.PLAYING) return;
 
     const success = game.giveClue(socket.id, data.word, data.number);
@@ -47,7 +54,7 @@ export function registerGameHandlers(
   });
 
   socket.on("client:vote-card", (data: VoteCardPayload) => {
-    const game = gameManager.findGameBySocketId(socket.id);
+    const game = getCodenamesGame(gameManager, socket.id);
     if (!game || game.phase !== GamePhase.PLAYING) return;
 
     const success = game.vote(socket.id, data.position);
@@ -59,7 +66,7 @@ export function registerGameHandlers(
   });
 
   socket.on("client:confirm-guess", (data: ConfirmGuessPayload) => {
-    const game = gameManager.findGameBySocketId(socket.id);
+    const game = getCodenamesGame(gameManager, socket.id);
     if (!game || game.phase !== GamePhase.PLAYING) return;
     // Must be in guessing phase
     if (game.turnPhase !== TurnPhase.GUESSING) return;
@@ -96,7 +103,7 @@ export function registerGameHandlers(
   });
 
   socket.on("client:pass-turn", () => {
-    const game = gameManager.findGameBySocketId(socket.id);
+    const game = getCodenamesGame(gameManager, socket.id);
     if (!game || game.phase !== GamePhase.PLAYING) return;
     // Must be in guessing phase
     if (game.turnPhase !== TurnPhase.GUESSING) return;
@@ -114,7 +121,7 @@ export function registerGameHandlers(
   });
 
   socket.on("client:rematch", () => {
-    const game = gameManager.findGameBySocketId(socket.id);
+    const game = getCodenamesGame(gameManager, socket.id);
     if (!game) return;
 
     const player = game.findPlayerBySocketId(socket.id);

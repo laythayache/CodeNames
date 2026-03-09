@@ -1,12 +1,11 @@
 import { Server, Socket } from "socket.io";
 import { GameManager } from "../managers/GameManager";
-import { GamePhase, KickPlayerPayload } from "shared/types";
+import { GamePhase, GameType, KickPlayerPayload } from "shared/types";
+import { Game } from "../models/Game";
+import { KalakGame } from "../models/KalakGame";
 import { getTimerManager } from "./gameHandlers";
 
-function broadcastGameState(io: Server, gameManager: GameManager, roomCode: string): void {
-  const game = gameManager.getGame(roomCode);
-  if (!game) return;
-
+function broadcastGameState(io: Server, game: Game): void {
   for (const p of game.players) {
     const sock = io.sockets.sockets.get(p.id);
     if (sock) {
@@ -21,8 +20,9 @@ export function registerAdminHandlers(
   gameManager: GameManager
 ): void {
   socket.on("client:admin-pause", () => {
-    const game = gameManager.findGameBySocketId(socket.id);
-    if (!game) return;
+    const baseGame = gameManager.findGameBySocketId(socket.id);
+    if (!baseGame || baseGame.gameType !== GameType.CODENAMES) return;
+    const game = baseGame as Game;
 
     const player = game.findPlayerBySocketId(socket.id);
     if (!player?.isHost) return;
@@ -37,45 +37,59 @@ export function registerAdminHandlers(
       if (game.timerEnabled) {
         timerManager.resume(io, game.roomCode, () => {
           game.passTurn();
-          broadcastGameState(io, gameManager, game.roomCode);
+          broadcastGameState(io, game);
         });
       }
     }
 
     io.to(game.roomCode).emit("server:game-paused", { paused: game.phase === GamePhase.PAUSED });
-    broadcastGameState(io, gameManager, game.roomCode);
+    broadcastGameState(io, game);
   });
 
   socket.on("client:admin-kick", (data: KickPlayerPayload) => {
-    const game = gameManager.findGameBySocketId(socket.id);
-    if (!game) return;
+    const baseGame = gameManager.findGameBySocketId(socket.id);
+    if (!baseGame) return;
 
-    const player = game.findPlayerBySocketId(socket.id);
+    const player = baseGame.findPlayerBySocketId(socket.id);
     if (!player?.isHost) return;
 
-    const target = game.findPlayerByName(data.displayName);
+    const target = baseGame.findPlayerByName(data.displayName);
     if (!target || target.isHost) return;
 
     // Disconnect the kicked player's socket
     const targetSocket = io.sockets.sockets.get(target.id);
     if (targetSocket) {
       targetSocket.emit("server:player-kicked", { displayName: data.displayName });
-      targetSocket.leave(game.roomCode);
+      targetSocket.leave(baseGame.roomCode);
       targetSocket.disconnect(true);
     }
 
-    game.removePlayer(data.displayName);
+    baseGame.removePlayer(data.displayName);
 
-    if (game.phase === GamePhase.LOBBY) {
-      io.to(game.roomCode).emit("server:lobby-state", game.getLobbyState());
+    if (baseGame.phase === GamePhase.LOBBY) {
+      if (baseGame.gameType === GameType.KALAK) {
+        io.to(baseGame.roomCode).emit("server:kalak-lobby-state", (baseGame as KalakGame).getLobbyState());
+      } else {
+        io.to(baseGame.roomCode).emit("server:lobby-state", baseGame.getLobbyState());
+      }
+    } else if (baseGame.gameType === GameType.CODENAMES) {
+      broadcastGameState(io, baseGame as Game);
     } else {
-      broadcastGameState(io, gameManager, game.roomCode);
+      const kg = baseGame as KalakGame;
+      for (const p of kg.players) {
+        if (p.isConnected) {
+          const sock = io.sockets.sockets.get(p.id);
+          if (sock) sock.emit("server:kalak-game-state", kg.getGameStatePayload(p));
+        }
+      }
     }
   });
 
   socket.on("client:admin-skip-turn", () => {
-    const game = gameManager.findGameBySocketId(socket.id);
-    if (!game || (game.phase !== GamePhase.PLAYING && game.phase !== GamePhase.PAUSED)) return;
+    const baseGame = gameManager.findGameBySocketId(socket.id);
+    if (!baseGame || baseGame.gameType !== GameType.CODENAMES) return;
+    const game = baseGame as Game;
+    if (game.phase !== GamePhase.PLAYING && game.phase !== GamePhase.PAUSED) return;
 
     const player = game.findPlayerBySocketId(socket.id);
     if (!player?.isHost) return;
@@ -83,30 +97,40 @@ export function registerAdminHandlers(
     const timerManager = getTimerManager();
     timerManager.stop(game.roomCode);
     game.passTurn();
-    broadcastGameState(io, gameManager, game.roomCode);
+    broadcastGameState(io, game);
   });
 
   socket.on("client:admin-end-game", () => {
-    const game = gameManager.findGameBySocketId(socket.id);
-    if (!game) return;
+    const baseGame = gameManager.findGameBySocketId(socket.id);
+    if (!baseGame) return;
 
-    const player = game.findPlayerBySocketId(socket.id);
+    const player = baseGame.findPlayerBySocketId(socket.id);
     if (!player?.isHost) return;
 
     const timerManager = getTimerManager();
-    timerManager.stop(game.roomCode);
+    timerManager.stop(baseGame.roomCode);
 
-    game.phase = GamePhase.GAME_OVER;
-    // Winner is team with fewer remaining cards
-    game.winner = game.redRemaining <= game.blueRemaining ? null : null; // no winner on force end
+    baseGame.phase = GamePhase.GAME_OVER;
 
-    io.to(game.roomCode).emit("server:game-over", {
-      winner: null,
-      reason: "FORCE_END",
-      board: game.board,
-      stats: game.getStats(),
-    });
-
-    broadcastGameState(io, gameManager, game.roomCode);
+    if (baseGame.gameType === GameType.CODENAMES) {
+      const game = baseGame as Game;
+      game.winner = null;
+      io.to(game.roomCode).emit("server:game-over", {
+        winner: null,
+        reason: "FORCE_END",
+        board: game.board,
+        stats: game.getStats(),
+      });
+      broadcastGameState(io, game);
+    } else {
+      const kg = baseGame as KalakGame;
+      io.to(kg.roomCode).emit("server:kalak-game-over", kg.getGameOverPayload());
+      for (const p of kg.players) {
+        if (p.isConnected) {
+          const sock = io.sockets.sockets.get(p.id);
+          if (sock) sock.emit("server:kalak-game-state", kg.getGameStatePayload(p));
+        }
+      }
+    }
   });
 }

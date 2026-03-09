@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
-import type { Team, Role } from "shared/types";
+import { GameType, type Team, type Role } from "shared/types";
 
 interface PlayerState {
   displayName: string;
@@ -7,6 +7,7 @@ interface PlayerState {
   team: Team | null;
   role: Role | null;
   isHost: boolean;
+  gameType: GameType | null;
 }
 
 interface PlayerContextValue extends PlayerState {
@@ -14,6 +15,7 @@ interface PlayerContextValue extends PlayerState {
   setRoomCode: (code: string) => void;
   setTeamAndRole: (team: Team | null, role: Role | null) => void;
   setIsHost: (isHost: boolean) => void;
+  setGameType: (gameType: GameType) => void;
   reset: () => void;
 }
 
@@ -23,6 +25,7 @@ const defaultState: PlayerState = {
   team: null,
   role: null,
   isHost: false,
+  gameType: null,
 };
 
 const PlayerContext = createContext<PlayerContextValue | null>(null);
@@ -32,6 +35,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     ...defaultState,
     displayName: sessionStorage.getItem("codenames:displayName") || "",
     roomCode: sessionStorage.getItem("codenames:roomCode") || "",
+    gameType: (sessionStorage.getItem("codenames:gameType") as GameType) || null,
   }));
 
   const setDisplayName = useCallback((name: string) => {
@@ -52,15 +56,21 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     setState((s) => ({ ...s, isHost }));
   }, []);
 
+  const setGameType = useCallback((gameType: GameType) => {
+    sessionStorage.setItem("codenames:gameType", gameType);
+    setState((s) => ({ ...s, gameType }));
+  }, []);
+
   const reset = useCallback(() => {
     sessionStorage.removeItem("codenames:displayName");
     sessionStorage.removeItem("codenames:roomCode");
+    sessionStorage.removeItem("codenames:gameType");
     setState(defaultState);
   }, []);
 
   return (
     <PlayerContext.Provider
-      value={{ ...state, setDisplayName, setRoomCode, setTeamAndRole, setIsHost, reset }}
+      value={{ ...state, setDisplayName, setRoomCode, setTeamAndRole, setIsHost, setGameType, reset }}
     >
       {children}
     </PlayerContext.Provider>

@@ -1,11 +1,13 @@
 import {
   Card, CardPayload, CardType, Clue, GamePhase, GameStatePayload,
-  GameStats, LogEntry, LobbyStatePayload, Player, Role, Team, TurnPhase,
+  GameStats, GameType, LogEntry, LobbyStatePayload, Player, Role, Team, TurnPhase,
 } from "shared/types";
 import { generateBoard } from "../utils/boardGenerator";
 import { DEFAULT_TIMER_DURATION } from "../config";
+import type { BaseGame } from "./BaseGame";
 
-export class Game {
+export class Game implements BaseGame {
+  gameType: GameType = GameType.CODENAMES;
   roomCode: string;
   phase: GamePhase = GamePhase.LOBBY;
   players: Player[] = [];

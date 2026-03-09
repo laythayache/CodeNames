@@ -109,6 +109,7 @@ export interface LobbyStatePayload {
 
 export interface CreateRoomPayload {
   displayName: string;
+  gameType?: GameType;
 }
 
 export interface JoinRoomPayload {
@@ -169,4 +170,116 @@ export interface GameOverPayload {
 
 export interface ErrorPayload {
   message: string;
+}
+
+// ── Game Type ──
+
+export enum GameType {
+  CODENAMES = "CODENAMES",
+  KALAK = "KALAK",
+}
+
+// ── Kalak Enums ──
+
+export enum KalakLanguage {
+  ENGLISH = "ENGLISH",
+  ARABIC = "ARABIC",
+}
+
+export enum KalakRoundPhase {
+  QUESTION = "QUESTION",
+  ANSWERING = "ANSWERING",
+  VOTING = "VOTING",
+  REVEAL = "REVEAL",
+}
+
+// ── Kalak Interfaces ──
+
+export interface KalakAnswer {
+  id: string;        // unique ID for voting reference
+  text: string;
+  playerId: string;  // "CORRECT" for the real answer
+  playerName: string; // "" for the real answer
+}
+
+export interface KalakVote {
+  voterId: string;
+  voterName: string;
+  answerId: string;  // id of the answer they voted for
+}
+
+export interface KalakScoreDelta {
+  correct: number;   // +2 if voted correctly
+  fooled: number;    // +1 per player fooled
+  total: number;
+}
+
+export interface KalakRoundResult {
+  roundNumber: number;
+  question: string;
+  correctAnswer: string;
+  answers: KalakAnswer[];
+  votes: KalakVote[];
+  scoreDeltas: Record<string, KalakScoreDelta>; // keyed by displayName
+}
+
+export interface KalakPlayerScore {
+  displayName: string;
+  score: number;
+  correctAnswers: number;
+  timesFooledOthers: number;
+}
+
+// ── Kalak Payloads ──
+
+export interface KalakGameStatePayload {
+  roomCode: string;
+  gameType: GameType.KALAK;
+  phase: GamePhase;
+  roundPhase: KalakRoundPhase;
+  players: Player[];
+  scores: KalakPlayerScore[];
+  currentRound: number;
+  totalRounds: number;
+  language: KalakLanguage;
+  categories: string[];
+  question: string | null;
+  // Voting phase: shuffled answers (own answer marked)
+  answers: { id: string; text: string; isOwn: boolean }[] | null;
+  playersAnswered: string[];  // displayNames who submitted
+  playersVoted: string[];     // displayNames who voted
+  roundResult: KalakRoundResult | null; // only in REVEAL
+  timerSeconds: number | null;
+}
+
+export interface KalakLobbyStatePayload {
+  gameType: GameType.KALAK;
+  players: Player[];
+  language: KalakLanguage;
+  categories: string[];
+  totalRounds: number;
+  freeMode: boolean;
+}
+
+export interface KalakGameOverPayload {
+  scores: KalakPlayerScore[];
+  roundHistory: KalakRoundResult[];
+  winner: string; // displayName
+}
+
+// ── Kalak Socket Payloads ──
+
+export interface KalakUpdateSettingsPayload {
+  language: KalakLanguage;
+  categories: string[];
+  totalRounds: number;
+  freeMode: boolean;
+}
+
+export interface KalakSubmitAnswerPayload {
+  answer: string;
+}
+
+export interface KalakVotePayload {
+  answerId: string;
 }
