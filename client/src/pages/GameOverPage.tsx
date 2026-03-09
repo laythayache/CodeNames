@@ -22,13 +22,13 @@ export function GameOverPage() {
         {/* Winner Banner */}
         <div className="bg-parchment rounded-2xl p-6 sm:p-8 text-center mb-4 sm:mb-6 shadow-lg">
           {isForcedEnd ? (
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-600 font-[family-name:var(--font-display)]">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-600 font-display">
               Game Ended
             </h1>
           ) : (
             <>
               <h1
-                className={`text-3xl sm:text-4xl font-bold font-[family-name:var(--font-display)]
+                className={`text-3xl sm:text-4xl font-bold font-display
                   ${gameOver.winner === Team.RED ? "text-team-red" : "text-team-blue"}`}
               >
                 {gameOver.winner === Team.RED ? "RED" : "BLUE"} TEAM WINS!
@@ -78,11 +78,11 @@ export function GameOverPage() {
               <div
                 key={card.position}
                 className={`${getColor()} rounded-md sm:rounded-lg p-1 sm:p-2 text-center
-                           min-h-[2.5rem] sm:min-h-0 sm:aspect-[4/3]
+                           min-h-10 sm:min-h-0 sm:aspect-4/3
                            flex items-center justify-center
                            ${card.revealed ? "opacity-50 ring-2 ring-white/30" : "shadow-sm"}`}
               >
-                <span className="text-[9px] sm:text-sm font-bold font-[family-name:var(--font-display)] break-all">
+                <span className="text-[9px] sm:text-sm font-bold font-display break-all">
                   {card.word}
                 </span>
               </div>

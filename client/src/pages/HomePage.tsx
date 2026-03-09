@@ -28,7 +28,7 @@ export function HomePage() {
   return (
     <div className="min-h-dvh flex items-center justify-center bg-felt p-4">
       <div className="bg-parchment rounded-2xl shadow-2xl p-6 sm:p-8 w-full max-w-md">
-        <h1 className="font-[family-name:var(--font-display)] text-4xl sm:text-5xl font-bold text-center mb-2 text-wood-dark">
+        <h1 className="font-display text-4xl sm:text-5xl font-bold text-center mb-2 text-wood-dark">
           CODENAMES
         </h1>
         <p className="text-center text-wood mb-8 text-sm">Top Secret Word Game</p>

@@ -157,7 +157,7 @@ function Board({
   };
 
   return (
-    <div className="grid grid-cols-5 gap-[3px] sm:gap-1.5 md:gap-2 w-full"
+    <div className="grid grid-cols-5 gap-0.75 sm:gap-1.5 md:gap-2 w-full"
          style={{ gridAutoRows: "1fr" }}>
       {board.map((card) => (
         <CardComponent
@@ -216,8 +216,8 @@ function CardComponent({
       onClick={onClick}
       disabled={!canClick}
       className={`relative rounded-md sm:rounded-lg flex items-center justify-center
-                  aspect-[5/3] sm:aspect-[4/3]
-                  transition-all duration-300 font-[family-name:var(--font-display)]
+                  aspect-5/3 sm:aspect-4/3
+                  transition-all duration-300 font-display
                   ${colorClass}
                   ${canClick ? "cursor-pointer active:scale-[0.92] sm:hover:scale-105 sm:hover:shadow-xl" : "cursor-default"}
                   ${isRevealed ? "opacity-70 scale-[0.97]" : "shadow-md"}
@@ -312,7 +312,7 @@ function ClueDisplay({ clue, guessesRemaining }: {
   return (
     <div className={`${bgClass} rounded-xl px-3 sm:px-4 py-2.5 flex items-center gap-2 sm:gap-4 flex-wrap`}>
       <span className="text-[10px] sm:text-xs text-gray-500 font-semibold">CLUE:</span>
-      <span className={`font-bold text-lg sm:text-xl ${textClass} font-[family-name:var(--font-display)]`}>
+      <span className={`font-bold text-lg sm:text-xl ${textClass} font-display`}>
         {clue.word}
       </span>
       <span className={`${textClass} font-bold text-base sm:text-lg bg-white/50 px-2 py-0.5 rounded-md`}>
