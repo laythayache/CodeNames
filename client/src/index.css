@@ -1,0 +1,37 @@
+@import "tailwindcss";
+
+@theme {
+  /* Board game warm palette */
+  --color-parchment: #f5f0e1;
+  --color-parchment-dark: #e8dcc8;
+  --color-felt: #2d5016;
+  --color-felt-light: #3a6b1e;
+  --color-wood: #8b6914;
+  --color-wood-dark: #6b4f10;
+
+  /* Team colors */
+  --color-team-red: #c0392b;
+  --color-team-red-light: #e74c3c;
+  --color-team-red-bg: #fdeaea;
+  --color-team-blue: #2471a3;
+  --color-team-blue-light: #3498db;
+  --color-team-blue-bg: #eaf2f8;
+
+  /* Card colors */
+  --color-card-neutral: #b0a48c;
+  --color-card-assassin: #1a1a2e;
+
+  /* Fonts */
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-body: system-ui, -apple-system, sans-serif;
+}
+
+@layer base {
+  body {
+    margin: 0;
+    font-family: var(--font-body);
+    background-color: var(--color-parchment);
+    color: #2c2c2c;
+    min-height: 100vh;
+  }
+}

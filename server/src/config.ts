@@ -1,0 +1,9 @@
+export const PORT = 3000;
+export const DEFAULT_TIMER_DURATION = 120; // seconds
+export const ABANDONMENT_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+export const HOST_TRANSFER_TIMEOUT = 30 * 1000; // 30 seconds
+export const BOARD_SIZE = 25;
+export const RED_CARD_COUNT = 9;
+export const BLUE_CARD_COUNT = 8;
+export const NEUTRAL_CARD_COUNT = 7;
+export const ASSASSIN_CARD_COUNT = 1;
