@@ -31,20 +31,20 @@ export function LobbyPage() {
     && bluePlayers.some((p) => p.role === Role.SPYMASTER);
 
   return (
-    <div className="min-h-screen bg-felt p-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-dvh bg-felt p-3 sm:p-4">
+      <div className="max-w-2xl mx-auto">
         {/* Room Code */}
         <div className="text-center mb-6">
-          <p className="text-parchment-dark text-sm mb-1">ROOM CODE</p>
-          <div className="bg-parchment inline-block px-8 py-3 rounded-xl">
-            <span className="font-mono text-4xl font-bold tracking-[0.3em] text-wood-dark">
+          <p className="text-parchment-dark text-xs sm:text-sm mb-1">ROOM CODE</p>
+          <div className="bg-parchment inline-block px-6 sm:px-8 py-3 rounded-xl shadow-lg">
+            <span className="font-mono text-3xl sm:text-4xl font-bold tracking-[0.3em] text-wood-dark select-all">
               {player.roomCode}
             </span>
           </div>
         </div>
 
         {/* Teams */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
           <TeamPanel
             team={Team.RED}
             players={redPlayers}
@@ -61,11 +61,11 @@ export function LobbyPage() {
 
         {/* Unassigned */}
         {unassigned.length > 0 && (
-          <div className="bg-parchment rounded-xl p-4 mb-6">
-            <h3 className="text-sm font-semibold text-gray-500 mb-2">UNASSIGNED</h3>
+          <div className="bg-parchment rounded-xl p-3 sm:p-4 mb-4 sm:mb-6">
+            <h3 className="text-xs font-semibold text-gray-500 mb-2">UNASSIGNED</h3>
             <div className="flex flex-wrap gap-2">
               {unassigned.map((p) => (
-                <span key={p.displayName} className="bg-white px-3 py-1 rounded-full text-sm">
+                <span key={p.displayName} className="bg-white px-3 py-1.5 rounded-full text-sm font-medium">
                   {p.displayName} {p.isHost && "👑"}
                   {!p.isConnected && <span className="text-red-400 ml-1">(offline)</span>}
                 </span>
@@ -76,23 +76,23 @@ export function LobbyPage() {
 
         {/* Settings (host only) */}
         {player.isHost && (
-          <div className="bg-parchment rounded-xl p-4 mb-6">
-            <h3 className="text-sm font-semibold text-gray-500 mb-3">GAME SETTINGS</h3>
+          <div className="bg-parchment rounded-xl p-3 sm:p-4 mb-4 sm:mb-6">
+            <h3 className="text-xs font-semibold text-gray-500 mb-3">GAME SETTINGS</h3>
             <div className="flex items-center gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
                   checked={lobby.timerEnabled}
                   onChange={(e) => handleUpdateSettings(e.target.checked, lobby.timerDuration)}
-                  className="w-4 h-4"
+                  className="w-5 h-5"
                 />
-                <span className="text-sm">Turn Timer</span>
+                <span className="text-sm font-medium">Turn Timer</span>
               </label>
               {lobby.timerEnabled && (
                 <select
                   value={lobby.timerDuration}
                   onChange={(e) => handleUpdateSettings(true, Number(e.target.value))}
-                  className="px-3 py-1 rounded border bg-white text-sm"
+                  className="px-3 py-2 rounded-lg border bg-white text-sm font-medium"
                 >
                   <option value={60}>60s</option>
                   <option value={90}>90s</option>
@@ -109,8 +109,10 @@ export function LobbyPage() {
           <button
             onClick={handleStart}
             disabled={!canStart}
-            className="w-full py-4 bg-wood text-white rounded-xl font-bold text-xl
-                       hover:bg-wood-dark transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className={`w-full py-4 rounded-xl font-bold text-lg sm:text-xl transition-all active:scale-95
+                       ${canStart
+                         ? "bg-confirm text-white shadow-lg shadow-confirm/30 hover:bg-confirm-dark"
+                         : "bg-gray-300 text-gray-500 cursor-not-allowed"}`}
           >
             {canStart ? "START GAME" : "Each team needs a spymaster"}
           </button>
@@ -132,34 +134,34 @@ function TeamPanel({
   onPickTeam: (team: Team, role: Role) => void;
 }) {
   const isRed = team === Team.RED;
-  const bgClass = isRed ? "bg-team-red-bg" : "bg-team-blue-bg";
+  const bgClass = isRed ? "bg-team-red-bg border-2 border-team-red/20" : "bg-team-blue-bg border-2 border-team-blue/20";
   const headerClass = isRed ? "text-team-red" : "text-team-blue";
   const btnClass = isRed
-    ? "bg-team-red text-white hover:bg-team-red-light"
-    : "bg-team-blue text-white hover:bg-team-blue-light";
+    ? "bg-team-red text-white shadow-md shadow-team-red/25 hover:bg-team-red-dark active:scale-95"
+    : "bg-team-blue text-white shadow-md shadow-team-blue/25 hover:bg-team-blue-dark active:scale-95";
 
   const spymaster = players.find((p) => p.role === Role.SPYMASTER);
   const operatives = players.filter((p) => p.role === Role.OPERATIVE);
   const iAmOnThisTeam = players.some((p) => p.displayName === myName);
 
   return (
-    <div className={`${bgClass} rounded-xl p-4`}>
-      <h2 className={`${headerClass} font-bold text-lg mb-3`}>
+    <div className={`${bgClass} rounded-xl p-3 sm:p-4`}>
+      <h2 className={`${headerClass} font-bold text-base sm:text-lg mb-3`}>
         {isRed ? "RED TEAM" : "BLUE TEAM"}
       </h2>
 
       {/* Spymaster slot */}
       <div className="mb-3">
-        <p className="text-xs text-gray-500 mb-1">SPYMASTER</p>
+        <p className="text-[10px] sm:text-xs text-gray-500 mb-1 font-semibold">SPYMASTER</p>
         {spymaster ? (
-          <div className="bg-white px-3 py-2 rounded-lg text-sm font-medium">
+          <div className="bg-white px-3 py-2.5 rounded-lg text-sm font-semibold shadow-sm">
             🕵️ {spymaster.displayName}
             {!spymaster.isConnected && <span className="text-red-400 ml-1">(offline)</span>}
           </div>
         ) : (
           <button
             onClick={() => onPickTeam(team, Role.SPYMASTER)}
-            className={`w-full px-3 py-2 rounded-lg text-sm font-medium ${btnClass} transition-colors`}
+            className={`w-full px-3 py-2.5 rounded-lg text-sm font-bold ${btnClass} transition-all`}
           >
             Join as Spymaster
           </button>
@@ -168,10 +170,10 @@ function TeamPanel({
 
       {/* Operatives */}
       <div>
-        <p className="text-xs text-gray-500 mb-1">OPERATIVES</p>
-        <div className="space-y-1">
+        <p className="text-[10px] sm:text-xs text-gray-500 mb-1 font-semibold">OPERATIVES</p>
+        <div className="space-y-1.5">
           {operatives.map((p) => (
-            <div key={p.displayName} className="bg-white px-3 py-2 rounded-lg text-sm">
+            <div key={p.displayName} className="bg-white px-3 py-2.5 rounded-lg text-sm font-medium shadow-sm">
               🔍 {p.displayName}
               {!p.isConnected && <span className="text-red-400 ml-1">(offline)</span>}
             </div>
@@ -179,7 +181,7 @@ function TeamPanel({
           {!iAmOnThisTeam && (
             <button
               onClick={() => onPickTeam(team, Role.OPERATIVE)}
-              className={`w-full px-3 py-2 rounded-lg text-sm font-medium ${btnClass} transition-colors`}
+              className={`w-full px-3 py-2.5 rounded-lg text-sm font-bold ${btnClass} transition-all`}
             >
               Join as Operative
             </button>

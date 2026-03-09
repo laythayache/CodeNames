@@ -126,7 +126,8 @@ export class Game {
       team: this.currentTurn,
       spymaster: player.displayName,
     };
-    this.guessesRemaining = number + 1;
+    // Number 0 means unlimited guesses (official rules)
+    this.guessesRemaining = number === 0 ? Infinity : number + 1;
     this.turnPhase = TurnPhase.GUESSING;
     this.currentVotes.clear();
     this.turnsPlayed++;
@@ -153,6 +154,11 @@ export class Game {
     const isOnlyPlayer = this.getTeamOperatives(this.currentTurn).length === 0;
     if (player.role !== Role.OPERATIVE && !isOnlyPlayer) return false;
 
+    // If voting for a specific card, validate it first before removing old vote
+    if (position >= 0 && position < this.board.length) {
+      if (this.board[position].revealed) return false; // can't vote on revealed cards
+    }
+
     // Remove existing vote from this player
     for (const [pos, voters] of this.currentVotes) {
       voters.delete(player.displayName);
@@ -160,7 +166,7 @@ export class Game {
     }
 
     // Add new vote (position -1 means abstain/remove)
-    if (position >= 0 && position < this.board.length && !this.board[position].revealed) {
+    if (position >= 0 && position < this.board.length) {
       if (!this.currentVotes.has(position)) {
         this.currentVotes.set(position, new Set());
       }
@@ -168,6 +174,14 @@ export class Game {
     }
 
     return true;
+  }
+
+  // Remove votes from a specific player (used on disconnect)
+  removeVotesForPlayer(displayName: string): void {
+    for (const [pos, voters] of this.currentVotes) {
+      voters.delete(displayName);
+      if (voters.size === 0) this.currentVotes.delete(pos);
+    }
   }
 
   getVotesPayload(): Record<number, string[]> {
@@ -294,12 +308,13 @@ export class Game {
       && this.turnPhase === TurnPhase.GUESSING
       && this.getTeamOperatives(this.currentTurn).length === 0;
 
+    const votesMap = this.getVotesPayload();
     const board: CardPayload[] = this.board.map((card) => ({
       word: card.word,
       type: (isSpymaster && !hideTypes) || card.revealed ? card.type : undefined,
       revealed: card.revealed,
       position: card.position,
-      votes: card.votes,
+      votes: votesMap[card.position] || [],
     }));
 
     return {

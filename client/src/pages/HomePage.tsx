@@ -26,15 +26,15 @@ export function HomePage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-felt p-4">
-      <div className="bg-parchment rounded-2xl shadow-2xl p-8 w-full max-w-md">
-        <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold text-center mb-2 text-wood-dark">
+    <div className="min-h-dvh flex items-center justify-center bg-felt p-4">
+      <div className="bg-parchment rounded-2xl shadow-2xl p-6 sm:p-8 w-full max-w-md">
+        <h1 className="font-[family-name:var(--font-display)] text-4xl sm:text-5xl font-bold text-center mb-2 text-wood-dark">
           CODENAMES
         </h1>
         <p className="text-center text-wood mb-8 text-sm">Top Secret Word Game</p>
 
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-semibold text-gray-600 mb-2">
             Your Name
           </label>
           <input
@@ -43,58 +43,66 @@ export function HomePage() {
             onChange={(e) => setName(e.target.value)}
             placeholder="Enter your agent name..."
             maxLength={20}
-            className="w-full px-4 py-3 rounded-lg border-2 border-parchment-dark bg-white
+            className="w-full px-4 py-3 rounded-xl border-2 border-parchment-dark bg-white
                        focus:border-wood focus:outline-none text-lg"
           />
         </div>
 
         {mode === "menu" ? (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <button
               onClick={handleCreate}
               disabled={!name.trim()}
-              className="w-full py-3 bg-team-red text-white rounded-lg font-semibold text-lg
-                         hover:bg-team-red-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-4 bg-team-red text-white rounded-xl font-bold text-lg
+                         shadow-lg shadow-team-red/30
+                         active:scale-95 hover:bg-team-red-dark transition-all
+                         disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
             >
               Create Game
             </button>
             <button
               onClick={() => setMode("join")}
               disabled={!name.trim()}
-              className="w-full py-3 bg-team-blue text-white rounded-lg font-semibold text-lg
-                         hover:bg-team-blue-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-4 bg-team-blue text-white rounded-xl font-bold text-lg
+                         shadow-lg shadow-team-blue/30
+                         active:scale-95 hover:bg-team-blue-dark transition-all
+                         disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
             >
               Join Game
             </button>
           </div>
         ) : (
-          <div className="space-y-3">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Room Code
-            </label>
-            <input
-              type="text"
-              value={roomCode}
-              onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-              placeholder="Enter 6-letter code..."
-              maxLength={6}
-              className="w-full px-4 py-3 rounded-lg border-2 border-parchment-dark bg-white
-                         focus:border-wood focus:outline-none text-lg text-center tracking-widest
-                         uppercase font-mono"
-            />
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-600 mb-2">
+                Room Code
+              </label>
+              <input
+                type="text"
+                value={roomCode}
+                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                placeholder="ABC123"
+                maxLength={6}
+                className="w-full px-4 py-3 rounded-xl border-2 border-parchment-dark bg-white
+                           focus:border-wood focus:outline-none text-2xl text-center tracking-[0.3em]
+                           uppercase font-mono font-bold"
+              />
+            </div>
             <button
               onClick={handleJoin}
               disabled={!name.trim() || roomCode.length < 6}
-              className="w-full py-3 bg-team-blue text-white rounded-lg font-semibold text-lg
-                         hover:bg-team-blue-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-4 bg-team-blue text-white rounded-xl font-bold text-lg
+                         shadow-lg shadow-team-blue/30
+                         active:scale-95 hover:bg-team-blue-dark transition-all
+                         disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
             >
               Join Room
             </button>
             <button
               onClick={() => setMode("menu")}
-              className="w-full py-2 text-gray-500 hover:text-gray-700 transition-colors"
+              className="w-full py-3 text-gray-500 font-semibold hover:text-gray-700 active:scale-95 transition-all"
             >
-              ← Back
+              Back
             </button>
           </div>
         )}

@@ -2,7 +2,7 @@ import { Server, Socket } from "socket.io";
 import { GameManager } from "../managers/GameManager";
 import { TimerManager } from "../managers/TimerManager";
 import {
-  ConfirmGuessPayload, GamePhase, GiveCluePayload, VoteCardPayload,
+  ConfirmGuessPayload, GamePhase, GiveCluePayload, Role, TurnPhase, VoteCardPayload,
 } from "shared/types";
 
 const timerManager = new TimerManager();
@@ -61,15 +61,26 @@ export function registerGameHandlers(
   socket.on("client:confirm-guess", (data: ConfirmGuessPayload) => {
     const game = gameManager.findGameBySocketId(socket.id);
     if (!game || game.phase !== GamePhase.PLAYING) return;
+    // Must be in guessing phase
+    if (game.turnPhase !== TurnPhase.GUESSING) return;
 
     const player = game.findPlayerBySocketId(socket.id);
     if (!player || player.team !== game.currentTurn) return;
+
+    // In normal mode, only operatives can confirm. In 1v1, spymaster can.
+    const isOneVOne = game.getTeamOperatives(game.currentTurn).length === 0;
+    if (player.role !== Role.OPERATIVE && !isOneVOne) return;
 
     // Verify majority
     const majorityPos = game.getMajorityPosition();
     if (majorityPos === null || majorityPos !== data.position) return;
 
     const result = game.revealCard(data.position);
+
+    // Broadcast updated votes (cleared after reveal)
+    io.to(game.roomCode).emit("server:votes-updated", {
+      votes: game.getVotesPayload(),
+    });
 
     if (result.gameOver) {
       timerManager.stop(game.roomCode);
@@ -87,21 +98,18 @@ export function registerGameHandlers(
   socket.on("client:pass-turn", () => {
     const game = gameManager.findGameBySocketId(socket.id);
     if (!game || game.phase !== GamePhase.PLAYING) return;
+    // Must be in guessing phase
+    if (game.turnPhase !== TurnPhase.GUESSING) return;
 
     const player = game.findPlayerBySocketId(socket.id);
     if (!player || player.team !== game.currentTurn) return;
 
+    // In normal mode, only operatives can pass. In 1v1, spymaster can.
+    const isOneVOne = game.getTeamOperatives(game.currentTurn).length === 0;
+    if (player.role !== Role.OPERATIVE && !isOneVOne) return;
+
     timerManager.stop(game.roomCode);
     game.passTurn();
-
-    // Start timer for next turn's clue phase if enabled
-    if (game.timerEnabled) {
-      timerManager.start(io, game.roomCode, game.timerDuration, () => {
-        game.passTurn();
-        broadcastGameState(io, gameManager, game.roomCode);
-      });
-    }
-
     broadcastGameState(io, gameManager, game.roomCode);
   });
 

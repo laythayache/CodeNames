@@ -72,10 +72,17 @@ export function registerConnectionHandlers(
 
     player.isConnected = false;
 
+    // Remove disconnected player's votes
+    game.removeVotesForPlayer(player.displayName);
+
     // Notify room
     if (game.phase === GamePhase.LOBBY) {
       io.to(game.roomCode).emit("server:lobby-state", game.getLobbyState());
     } else {
+      // Broadcast updated votes
+      io.to(game.roomCode).emit("server:votes-updated", {
+        votes: game.getVotesPayload(),
+      });
       // Broadcast updated player list
       for (const p of game.players) {
         if (p.isConnected) {

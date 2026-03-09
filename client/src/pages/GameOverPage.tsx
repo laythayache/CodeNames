@@ -17,24 +17,24 @@ export function GameOverPage() {
   const isForcedEnd = gameOver.reason === "FORCE_END";
 
   return (
-    <div className="min-h-screen bg-felt p-4">
-      <div className="max-w-4xl mx-auto">
+    <div className="min-h-dvh bg-felt p-3 sm:p-4">
+      <div className="max-w-2xl mx-auto">
         {/* Winner Banner */}
-        <div className="bg-parchment rounded-2xl p-8 text-center mb-6">
+        <div className="bg-parchment rounded-2xl p-6 sm:p-8 text-center mb-4 sm:mb-6 shadow-lg">
           {isForcedEnd ? (
-            <h1 className="text-3xl font-bold text-gray-600 font-[family-name:var(--font-display)]">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-600 font-[family-name:var(--font-display)]">
               Game Ended
             </h1>
           ) : (
             <>
               <h1
-                className={`text-4xl font-bold font-[family-name:var(--font-display)]
+                className={`text-3xl sm:text-4xl font-bold font-[family-name:var(--font-display)]
                   ${gameOver.winner === Team.RED ? "text-team-red" : "text-team-blue"}`}
               >
                 {gameOver.winner === Team.RED ? "RED" : "BLUE"} TEAM WINS!
               </h1>
               {isAssassin && (
-                <p className="text-lg text-gray-600 mt-2">
+                <p className="text-base sm:text-lg text-gray-600 mt-2">
                   {stats.assassinHitBy === Team.RED ? "Red" : "Blue"} team hit the assassin!
                 </p>
               )}
@@ -43,26 +43,26 @@ export function GameOverPage() {
         </div>
 
         {/* Stats */}
-        <div className="bg-parchment rounded-xl p-6 mb-6">
-          <h2 className="text-sm font-semibold text-gray-500 mb-4">GAME STATS</h2>
+        <div className="bg-parchment rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
+          <h2 className="text-xs font-bold text-gray-500 mb-4">GAME STATS</h2>
           <div className="grid grid-cols-3 gap-4 text-center">
             <div>
-              <div className="text-2xl font-bold text-wood-dark">{stats.turnsPlayed}</div>
-              <div className="text-xs text-gray-500">Turns Played</div>
+              <div className="text-xl sm:text-2xl font-bold text-wood-dark">{stats.turnsPlayed}</div>
+              <div className="text-[10px] sm:text-xs text-gray-500 font-medium">Turns Played</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-team-red">{stats.redRemaining}</div>
-              <div className="text-xs text-gray-500">Red Cards Left</div>
+              <div className="text-xl sm:text-2xl font-bold text-team-red">{stats.redRemaining}</div>
+              <div className="text-[10px] sm:text-xs text-gray-500 font-medium">Red Left</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-team-blue">{stats.blueRemaining}</div>
-              <div className="text-xs text-gray-500">Blue Cards Left</div>
+              <div className="text-xl sm:text-2xl font-bold text-team-blue">{stats.blueRemaining}</div>
+              <div className="text-[10px] sm:text-xs text-gray-500 font-medium">Blue Left</div>
             </div>
           </div>
         </div>
 
         {/* Revealed Board */}
-        <div className="grid grid-cols-5 gap-2 mb-6">
+        <div className="grid grid-cols-5 gap-1 sm:gap-2 mb-4 sm:mb-6">
           {board.map((card) => {
             const getColor = () => {
               switch (card.type) {
@@ -77,10 +77,12 @@ export function GameOverPage() {
             return (
               <div
                 key={card.position}
-                className={`${getColor()} rounded-lg p-2 text-center aspect-[4/3]
-                           flex items-center justify-center ${card.revealed ? "opacity-60" : ""}`}
+                className={`${getColor()} rounded-md sm:rounded-lg p-1 sm:p-2 text-center
+                           min-h-[2.5rem] sm:min-h-0 sm:aspect-[4/3]
+                           flex items-center justify-center
+                           ${card.revealed ? "opacity-50 ring-2 ring-white/30" : "shadow-sm"}`}
               >
-                <span className="text-xs sm:text-sm font-bold font-[family-name:var(--font-display)]">
+                <span className="text-[9px] sm:text-sm font-bold font-[family-name:var(--font-display)] break-all">
                   {card.word}
                 </span>
               </div>
@@ -89,21 +91,21 @@ export function GameOverPage() {
         </div>
 
         {/* Game Log */}
-        {gs && (
-          <div className="bg-parchment rounded-xl p-4 mb-6">
-            <h3 className="text-sm font-semibold text-gray-500 mb-2">GAME LOG</h3>
-            <div className="space-y-1 text-sm max-h-60 overflow-y-auto">
+        {gs && gs.log.length > 0 && (
+          <div className="bg-parchment rounded-xl p-3 sm:p-4 mb-4 sm:mb-6">
+            <h3 className="text-xs font-bold text-gray-500 mb-2">GAME LOG</h3>
+            <div className="space-y-1 text-xs sm:text-sm max-h-48 sm:max-h-60 overflow-y-auto">
               {gs.log.map((entry, i) => (
                 <div key={i} className="py-1 border-b border-parchment-dark last:border-0">
-                  <span className={entry.team === Team.RED ? "text-team-red" : "text-team-blue"}>
+                  <span className={`font-bold ${entry.team === Team.RED ? "text-team-red" : "text-team-blue"}`}>
                     [{entry.team}]
                   </span>{" "}
                   {entry.type === "CLUE" && (
                     <span>Clue: <strong>{entry.details.clue?.word}</strong> {entry.details.clue?.number}</span>
                   )}
-                  {entry.type === "GUESS_CORRECT" && <span className="text-green-600">✓ {entry.details.cardWord}</span>}
-                  {entry.type === "GUESS_WRONG" && <span className="text-orange-600">✗ {entry.details.cardWord}</span>}
-                  {entry.type === "GUESS_ASSASSIN" && <span className="text-red-800">☠ {entry.details.cardWord}</span>}
+                  {entry.type === "GUESS_CORRECT" && <span className="text-confirm font-semibold">✓ {entry.details.cardWord}</span>}
+                  {entry.type === "GUESS_WRONG" && <span className="text-warning-dark font-semibold">✗ {entry.details.cardWord}</span>}
+                  {entry.type === "GUESS_ASSASSIN" && <span className="text-danger font-bold">☠ {entry.details.cardWord}</span>}
                   {entry.type === "PASS" && <span className="text-gray-500">Passed</span>}
                 </div>
               ))}
@@ -115,8 +117,8 @@ export function GameOverPage() {
         {player.isHost && (
           <button
             onClick={() => getSocket().emit("client:rematch")}
-            className="w-full py-4 bg-wood text-white rounded-xl font-bold text-xl
-                       hover:bg-wood-dark transition-colors"
+            className="w-full py-4 bg-confirm text-white rounded-xl font-bold text-lg sm:text-xl
+                       shadow-lg shadow-confirm/30 hover:bg-confirm-dark active:scale-95 transition-all"
           >
             REMATCH
           </button>

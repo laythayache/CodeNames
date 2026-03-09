@@ -6,20 +6,32 @@
   --color-parchment-dark: #e8dcc8;
   --color-felt: #2d5016;
   --color-felt-light: #3a6b1e;
-  --color-wood: #8b6914;
-  --color-wood-dark: #6b4f10;
+  --color-wood: #a67c00;
+  --color-wood-dark: #7a5c00;
 
-  /* Team colors */
-  --color-team-red: #c0392b;
-  --color-team-red-light: #e74c3c;
-  --color-team-red-bg: #fdeaea;
-  --color-team-blue: #2471a3;
-  --color-team-blue-light: #3498db;
-  --color-team-blue-bg: #eaf2f8;
+  /* Team colors — more vivid */
+  --color-team-red: #dc2626;
+  --color-team-red-light: #ef4444;
+  --color-team-red-dark: #b91c1c;
+  --color-team-red-bg: #fef2f2;
+  --color-team-blue: #2563eb;
+  --color-team-blue-light: #3b82f6;
+  --color-team-blue-dark: #1d4ed8;
+  --color-team-blue-bg: #eff6ff;
 
   /* Card colors */
-  --color-card-neutral: #b0a48c;
-  --color-card-assassin: #1a1a2e;
+  --color-card-neutral: #a8a29e;
+  --color-card-assassin: #18181b;
+
+  /* Action colors */
+  --color-confirm: #16a34a;
+  --color-confirm-dark: #15803d;
+  --color-pass: #6b7280;
+  --color-pass-dark: #4b5563;
+  --color-warning: #f59e0b;
+  --color-warning-dark: #d97706;
+  --color-danger: #dc2626;
+  --color-danger-dark: #b91c1c;
 
   /* Fonts */
   --font-display: "Playfair Display", Georgia, serif;
@@ -32,6 +44,12 @@
     font-family: var(--font-body);
     background-color: var(--color-parchment);
     color: #2c2c2c;
-    min-height: 100vh;
+    min-height: 100dvh;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Prevent zoom on input focus on iOS */
+  input, select, textarea {
+    font-size: 16px;
   }
 }

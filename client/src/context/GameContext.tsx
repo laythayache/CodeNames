@@ -34,8 +34,13 @@ const initialState: GameState = {
 
 function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
-    case "SET_GAME_STATE":
-      return { ...state, gameState: action.payload, votes: {} };
+    case "SET_GAME_STATE": {
+      // Only reset votes if the turn or phase changed (not on every state broadcast)
+      const turnChanged = state.gameState &&
+        (state.gameState.currentTurn !== action.payload.currentTurn ||
+         state.gameState.turnPhase !== action.payload.turnPhase);
+      return { ...state, gameState: action.payload, votes: turnChanged ? {} : state.votes };
+    }
     case "SET_LOBBY_STATE":
       return { ...state, lobbyState: action.payload };
     case "SET_GAME_OVER":
