@@ -2,7 +2,8 @@ import { createContext, useContext, useReducer, type ReactNode } from "react";
 import {
   type GameStatePayload, type LobbyStatePayload, type GameOverPayload,
   type VotesUpdatedPayload, type KalakGameStatePayload, type KalakLobbyStatePayload,
-  type KalakGameOverPayload, type KalakRoundResult,
+  type KalakGameOverPayload, type KalakRoundResult, type KalakHostDisplayPayload,
+  type KalakPlayerScore,
   GamePhase, GameType, TurnPhase, Team,
 } from "shared/types";
 
@@ -18,6 +19,10 @@ interface GameState {
   kalakLobbyState: KalakLobbyStatePayload | null;
   kalakGameOver: KalakGameOverPayload | null;
   kalakRoundResult: KalakRoundResult | null;
+  kalakHostDisplay: KalakHostDisplayPayload | null;
+  kalakLoading: boolean;
+  kalakLeaderboard: KalakPlayerScore[] | null;
+  kalakAnswerRejected: boolean;
   // Shared
   timerSeconds: number | null;
   kicked: boolean;
@@ -33,6 +38,12 @@ type GameAction =
   | { type: "SET_KALAK_LOBBY_STATE"; payload: KalakLobbyStatePayload }
   | { type: "SET_KALAK_GAME_OVER"; payload: KalakGameOverPayload }
   | { type: "SET_KALAK_ROUND_RESULT"; payload: KalakRoundResult }
+  | { type: "SET_KALAK_HOST_DISPLAY"; payload: KalakHostDisplayPayload }
+  | { type: "SET_KALAK_LOADING"; payload: boolean }
+  | { type: "SET_KALAK_LEADERBOARD"; payload: KalakPlayerScore[] }
+  | { type: "SET_KALAK_ANSWER_REJECTED"; payload: boolean }
+  | { type: "SET_KALAK_PLAYERS_ANSWERED"; payload: string[] }
+  | { type: "SET_KALAK_PLAYERS_VOTED"; payload: string[] }
   | { type: "SET_TIMER"; payload: number }
   | { type: "TIMER_EXPIRED" }
   | { type: "KICKED" }
@@ -48,6 +59,10 @@ const initialState: GameState = {
   kalakLobbyState: null,
   kalakGameOver: null,
   kalakRoundResult: null,
+  kalakHostDisplay: null,
+  kalakLoading: false,
+  kalakLeaderboard: null,
+  kalakAnswerRejected: false,
   timerSeconds: null,
   kicked: false,
 };
@@ -76,6 +91,22 @@ function gameReducer(state: GameState, action: GameAction): GameState {
       return { ...state, kalakGameOver: action.payload };
     case "SET_KALAK_ROUND_RESULT":
       return { ...state, kalakRoundResult: action.payload };
+    case "SET_KALAK_HOST_DISPLAY":
+      return { ...state, kalakHostDisplay: action.payload };
+    case "SET_KALAK_LOADING":
+      return { ...state, kalakLoading: action.payload };
+    case "SET_KALAK_LEADERBOARD":
+      return { ...state, kalakLeaderboard: action.payload };
+    case "SET_KALAK_ANSWER_REJECTED":
+      return { ...state, kalakAnswerRejected: action.payload };
+    case "SET_KALAK_PLAYERS_ANSWERED":
+      return state.kalakHostDisplay
+        ? { ...state, kalakHostDisplay: { ...state.kalakHostDisplay, playersAnswered: action.payload } }
+        : state;
+    case "SET_KALAK_PLAYERS_VOTED":
+      return state.kalakHostDisplay
+        ? { ...state, kalakHostDisplay: { ...state.kalakHostDisplay, playersVoted: action.payload } }
+        : state;
     case "SET_TIMER":
       return { ...state, timerSeconds: action.payload };
     case "TIMER_EXPIRED":

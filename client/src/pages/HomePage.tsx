@@ -13,12 +13,25 @@ export function HomePage() {
   const [gameType, setGameType] = useState<GameType>(GameType.CODENAMES);
 
   const handleCreate = () => {
-    if (!name.trim()) return;
-    player.setDisplayName(name.trim());
-    player.setGameType(gameType);
-    dispatch({ type: "SET_GAME_TYPE", payload: gameType });
-    connectSocket(name.trim());
-    getSocket().emit("client:create-room", { displayName: name.trim(), gameType });
+    if (gameType === GameType.KALAK) {
+      // Kalak: laptop is the host display, no name needed
+      player.setGameType(gameType);
+      player.setIsHostDisplay(true);
+      dispatch({ type: "SET_GAME_TYPE", payload: gameType });
+      connectSocket();
+      getSocket().emit("client:create-room", {
+        gameType,
+        isHostDisplay: true,
+      });
+    } else {
+      // Codenames: needs a player name
+      if (!name.trim()) return;
+      player.setDisplayName(name.trim());
+      player.setGameType(gameType);
+      dispatch({ type: "SET_GAME_TYPE", payload: gameType });
+      connectSocket(name.trim());
+      getSocket().emit("client:create-room", { displayName: name.trim(), gameType });
+    }
   };
 
   const handleJoin = () => {
@@ -31,6 +44,8 @@ export function HomePage() {
     });
   };
 
+  const isKalak = gameType === GameType.KALAK;
+
   return (
     <div className="min-h-dvh flex items-center justify-center bg-felt p-4">
       <div className="bg-parchment rounded-2xl shadow-2xl p-6 sm:p-8 w-full max-w-md">
@@ -39,21 +54,23 @@ export function HomePage() {
         </h1>
         <p className="text-center text-wood mb-6 text-sm">Pick a game and play with friends</p>
 
-        {/* Name Input */}
-        <div className="mb-5">
-          <label className="block text-sm font-semibold text-gray-600 mb-2">
-            Your Name
-          </label>
-          <input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Enter your name..."
-            maxLength={20}
-            className="w-full px-4 py-3 rounded-xl border-2 border-parchment-dark bg-white
-                       focus:border-wood focus:outline-none text-lg"
-          />
-        </div>
+        {/* Name Input — hidden for Kalak (host display doesn't need a name) */}
+        {!isKalak && (
+          <div className="mb-5">
+            <label className="block text-sm font-semibold text-gray-600 mb-2">
+              Your Name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Enter your name..."
+              maxLength={20}
+              className="w-full px-4 py-3 rounded-xl border-2 border-parchment-dark bg-white
+                         focus:border-wood focus:outline-none text-lg"
+            />
+          </div>
+        )}
 
         {mode === "menu" ? (
           <div className="space-y-4">
@@ -88,29 +105,42 @@ export function HomePage() {
               </div>
             </div>
 
+            {/* Kalak info note */}
+            {isKalak && (
+              <div className="bg-purple-50 border border-purple-200 rounded-xl p-3 text-center">
+                <p className="text-purple-700 text-xs font-semibold">
+                  This screen becomes the host display. Players join via QR code on their phones.
+                </p>
+              </div>
+            )}
+
             <button
               onClick={handleCreate}
-              disabled={!name.trim()}
+              disabled={!isKalak && !name.trim()}
               className={`w-full py-4 text-white rounded-xl font-bold text-lg
                          shadow-lg active:scale-95 transition-all
                          disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none
-                         ${gameType === GameType.KALAK
+                         ${isKalak
                            ? "bg-purple-600 shadow-purple-600/30 hover:bg-purple-700"
                            : "bg-team-red shadow-team-red/30 hover:bg-team-red-dark"
                          }`}
             >
-              Create Game
+              {isKalak ? "Create Room" : "Create Game"}
             </button>
-            <button
-              onClick={() => setMode("join")}
-              disabled={!name.trim()}
-              className="w-full py-4 bg-team-blue text-white rounded-xl font-bold text-lg
-                         shadow-lg shadow-team-blue/30
-                         active:scale-95 hover:bg-team-blue-dark transition-all
-                         disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
-            >
-              Join Game
-            </button>
+
+            {/* Join button — only for Codenames (Kalak players join via QR/link) */}
+            {!isKalak && (
+              <button
+                onClick={() => setMode("join")}
+                disabled={!name.trim()}
+                className="w-full py-4 bg-team-blue text-white rounded-xl font-bold text-lg
+                           shadow-lg shadow-team-blue/30
+                           active:scale-95 hover:bg-team-blue-dark transition-all
+                           disabled:opacity-40 disabled:cursor-not-allowed disabled:shadow-none"
+              >
+                Join Game
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-4">

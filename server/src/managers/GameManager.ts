@@ -1,4 +1,4 @@
-import { GameType } from "shared/types";
+import { Avatar, GameType } from "shared/types";
 import { Game } from "../models/Game";
 import { KalakGame } from "../models/KalakGame";
 import type { BaseGame } from "../models/BaseGame";
@@ -7,16 +7,44 @@ import { generateRoomCode } from "../utils/roomCode";
 export class GameManager {
   private games: Map<string, BaseGame> = new Map();
 
-  createGame(hostSocketId: string, hostName: string, gameType: GameType = GameType.CODENAMES): BaseGame {
+  // Track host display socket → room mapping
+  private hostDisplaySockets: Map<string, string> = new Map(); // socketId → roomCode
+
+  /**
+   * Create a Kalak game with host display (laptop is NOT a player).
+   */
+  createKalakRoom(hostDisplaySocketId: string): KalakGame {
     const existingCodes = new Set(this.games.keys());
     const roomCode = generateRoomCode(existingCodes);
-    const game = gameType === GameType.KALAK
-      ? new KalakGame(roomCode)
-      : new Game(roomCode);
+    const game = new KalakGame(roomCode);
+    game.hostDisplaySocketId = hostDisplaySocketId;
+    this.games.set(roomCode, game);
+    this.hostDisplaySockets.set(hostDisplaySocketId, roomCode);
+    console.log(`Kalak room created: ${roomCode} (host display: ${hostDisplaySocketId})`);
+    return game;
+  }
+
+  /**
+   * Create a Codenames game (host IS a player).
+   */
+  createCodenamesRoom(hostSocketId: string, hostName: string): Game {
+    const existingCodes = new Set(this.games.keys());
+    const roomCode = generateRoomCode(existingCodes);
+    const game = new Game(roomCode);
     game.addPlayer(hostSocketId, hostName, true);
     this.games.set(roomCode, game);
-    console.log(`Game created: ${roomCode} (${gameType}) by ${hostName}`);
+    console.log(`Codenames room created: ${roomCode} by ${hostName}`);
     return game;
+  }
+
+  /**
+   * Legacy createGame for backward compatibility.
+   */
+  createGame(hostSocketId: string, hostName: string, gameType: GameType = GameType.CODENAMES): BaseGame {
+    if (gameType === GameType.KALAK) {
+      return this.createKalakRoom(hostSocketId);
+    }
+    return this.createCodenamesRoom(hostSocketId, hostName);
   }
 
   getGame(roomCode: string): BaseGame | undefined {
@@ -34,10 +62,25 @@ export class GameManager {
   }
 
   findGameBySocketId(socketId: string): BaseGame | undefined {
+    // Check players
     for (const game of this.games.values()) {
       if (game.findPlayerBySocketId(socketId)) return game;
     }
     return undefined;
+  }
+
+  findGameByHostDisplaySocket(socketId: string): BaseGame | undefined {
+    const roomCode = this.hostDisplaySockets.get(socketId);
+    if (roomCode) return this.games.get(roomCode);
+    return undefined;
+  }
+
+  isHostDisplay(socketId: string): boolean {
+    return this.hostDisplaySockets.has(socketId);
+  }
+
+  removeHostDisplaySocket(socketId: string): void {
+    this.hostDisplaySockets.delete(socketId);
   }
 
   findGameByPlayerName(displayName: string): BaseGame | undefined {
@@ -48,6 +91,10 @@ export class GameManager {
   }
 
   removeGame(roomCode: string): void {
+    const game = this.games.get(roomCode);
+    if (game?.hostDisplaySocketId) {
+      this.hostDisplaySockets.delete(game.hostDisplaySocketId);
+    }
     this.games.delete(roomCode);
     console.log(`Game removed: ${roomCode}`);
   }

@@ -25,6 +25,7 @@ export class Game implements BaseGame {
   turnsPlayed: number = 0;
   currentVotes: Map<number, Set<string>> = new Map();
   createdAt: number = Date.now();
+  hostDisplaySocketId: string | null = null;
 
   constructor(roomCode: string) {
     this.roomCode = roomCode;
@@ -40,6 +41,8 @@ export class Game implements BaseGame {
       role: null,
       isHost,
       isConnected: true,
+      avatar: null,
+      joinedAtRound: null,
     };
     this.players.push(player);
     return player;

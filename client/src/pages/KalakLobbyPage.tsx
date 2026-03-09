@@ -3,6 +3,7 @@ import { useGame } from "../context/GameContext";
 import { usePlayer } from "../context/PlayerContext";
 import { getSocket } from "../socket";
 import { KalakLanguage } from "shared/types";
+import { AvatarDisplay } from "../components/Avatar";
 
 export function KalakLobbyPage() {
   const { state } = useGame();
@@ -12,21 +13,6 @@ export function KalakLobbyPage() {
 
   if (!lobby) return null;
 
-  const canStart = lobby.players.filter((p) => p.isConnected).length >= 3;
-
-  const handleUpdateSettings = (
-    language: KalakLanguage,
-    totalRounds: number,
-    freeMode: boolean
-  ) => {
-    getSocket().emit("client:kalak-update-settings", {
-      language,
-      categories: lobby.categories,
-      totalRounds,
-      freeMode,
-    });
-  };
-
   const handleAddCategory = () => {
     const trimmed = newCategory.trim();
     if (!trimmed) return;
@@ -34,81 +20,124 @@ export function KalakLobbyPage() {
     setNewCategory("");
   };
 
-  const handleRemoveCategory = (cat: string) => {
-    getSocket().emit("client:kalak-remove-category", { category: cat });
-  };
-
-  const handleStart = () => {
-    getSocket().emit("client:kalak-start-game");
-  };
+  const connectedCount = lobby.players.filter((p) => p.isConnected).length;
 
   return (
     <div className="min-h-dvh bg-felt p-3 sm:p-4">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-md mx-auto">
         {/* Header */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-5">
           <h1 className="font-display text-3xl sm:text-4xl font-bold text-parchment mb-1">
             KALAK
           </h1>
           <p className="text-parchment-dark text-xs sm:text-sm mb-3">Trivia Bluff Game</p>
-          <div className="bg-parchment inline-block px-6 sm:px-8 py-3 rounded-xl shadow-lg">
-            <span className="font-mono text-3xl sm:text-4xl font-bold tracking-[0.3em] text-wood-dark select-all">
+          <div className="bg-parchment inline-block px-6 py-2 rounded-xl shadow-lg">
+            <span className="text-[10px] font-bold text-gray-400 block mb-0.5">ROOM CODE</span>
+            <span className="font-mono text-2xl sm:text-3xl font-bold tracking-[0.3em] text-wood-dark select-all">
               {player.roomCode}
             </span>
           </div>
         </div>
 
         {/* Players */}
-        <div className="bg-parchment rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
+        <div className="bg-parchment rounded-xl p-4 sm:p-5 mb-4">
           <h2 className="text-xs font-bold text-gray-500 mb-3">
-            PLAYERS ({lobby.players.filter((p) => p.isConnected).length})
+            PLAYERS ({connectedCount})
           </h2>
-          <div className="flex flex-wrap gap-2">
+          <div className="space-y-2">
             {lobby.players.map((p) => (
-              <span
+              <div
                 key={p.displayName}
-                className={`px-3 py-2 rounded-full text-sm font-semibold
-                  ${p.isConnected ? "bg-purple-100 text-purple-800" : "bg-gray-100 text-gray-400"}`}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg
+                  ${p.isConnected ? "bg-purple-50" : "bg-gray-50 opacity-50"}`}
               >
-                {p.displayName}
-                {p.isHost && " 👑"}
-                {!p.isConnected && " (offline)"}
-              </span>
+                {/* Avatar */}
+                <div className="shrink-0">
+                  {p.avatar ? (
+                    <AvatarDisplay avatar={p.avatar} size={36} />
+                  ) : (
+                    <div className="w-9 h-9 rounded-full bg-purple-200 flex items-center justify-center">
+                      <span className="text-purple-600 font-bold text-sm">
+                        {p.displayName.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Name */}
+                <span className={`font-semibold text-sm flex-1 truncate
+                  ${p.isConnected ? "text-purple-800" : "text-gray-400"}`}
+                >
+                  {p.displayName}
+                  {p.displayName === player.displayName && (
+                    <span className="text-purple-400 ml-1">(you)</span>
+                  )}
+                </span>
+
+                {/* Status badges */}
+                {p.isHost && (
+                  <span className="text-xs bg-purple-200 text-purple-700 px-2 py-0.5 rounded-full font-bold">
+                    Host
+                  </span>
+                )}
+                {!p.isConnected && (
+                  <span className="text-xs text-gray-400 italic">offline</span>
+                )}
+              </div>
             ))}
           </div>
         </div>
 
-        {/* Categories — any player can add */}
-        <div className="bg-parchment rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
+        {/* Game Settings — read-only for players */}
+        <div className="bg-parchment rounded-xl p-4 sm:p-5 mb-4">
+          <h2 className="text-xs font-bold text-gray-500 mb-3">GAME SETTINGS</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white rounded-lg p-3 text-center">
+              <p className="text-[10px] font-bold text-gray-400 mb-0.5">LANGUAGE</p>
+              <p className="text-sm font-semibold text-wood-dark">
+                {lobby.language === KalakLanguage.ENGLISH ? "English" : "\u0627\u0644\u0639\u0631\u0628\u064A\u0629"}
+              </p>
+            </div>
+            <div className="bg-white rounded-lg p-3 text-center">
+              <p className="text-[10px] font-bold text-gray-400 mb-0.5">ROUNDS</p>
+              <p className="text-sm font-semibold text-wood-dark">{lobby.totalRounds}</p>
+            </div>
+            {lobby.freeMode && (
+              <div className="bg-green-50 rounded-lg p-3 text-center col-span-2">
+                <p className="text-[10px] font-bold text-green-600 mb-0.5">MODE</p>
+                <p className="text-sm font-semibold text-green-700">Free (cached questions only)</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Categories */}
+        <div className="bg-parchment rounded-xl p-4 sm:p-5 mb-4">
           <h2 className="text-xs font-bold text-gray-500 mb-3">CATEGORIES</h2>
 
           {/* Category chips */}
-          <div className="flex flex-wrap gap-2 mb-3">
-            {lobby.categories.map((cat) => (
-              <span
-                key={cat}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold"
-              >
-                {cat}
-                {player.isHost && (
-                  <button
-                    onClick={() => handleRemoveCategory(cat)}
-                    className="text-purple-400 hover:text-purple-700 font-bold text-xs leading-none"
-                  >
-                    x
-                  </button>
-                )}
-              </span>
-            ))}
-          </div>
+          {lobby.categories.length > 0 ? (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {lobby.categories.map((cat) => (
+                <span
+                  key={cat}
+                  className="px-3 py-1.5 bg-purple-100 text-purple-800 rounded-full text-sm font-semibold"
+                >
+                  {cat}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-400 text-sm mb-3 italic">No categories added yet</p>
+          )}
 
-          {/* Add category input */}
+          {/* Add category input — any player can add */}
           <div className="flex gap-2">
             <input
               type="text"
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
-              placeholder="Add a category..."
+              placeholder="Suggest a category..."
               maxLength={40}
               className="flex-1 px-3 py-2 rounded-lg border-2 border-parchment-dark bg-white
                          focus:border-purple-500 focus:outline-none text-sm"
@@ -126,99 +155,21 @@ export function KalakLobbyPage() {
           </div>
         </div>
 
-        {/* Settings (host only) */}
-        {player.isHost && (
-          <div className="bg-parchment rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
-            <h2 className="text-xs font-bold text-gray-500 mb-4">GAME SETTINGS</h2>
-
-            {/* Language */}
-            <div className="mb-4">
-              <label className="text-xs font-semibold text-gray-500 mb-2 block">LANGUAGE</label>
-              <div className="grid grid-cols-2 gap-2">
-                {([KalakLanguage.ENGLISH, KalakLanguage.ARABIC] as const).map((lang) => (
-                  <button
-                    key={lang}
-                    onClick={() => handleUpdateSettings(lang, lobby.totalRounds, lobby.freeMode)}
-                    className={`py-2.5 px-4 rounded-lg text-sm font-bold transition-all active:scale-95
-                      ${lobby.language === lang
-                        ? "bg-purple-600 text-white shadow-md"
-                        : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
-                  >
-                    {lang === KalakLanguage.ENGLISH ? "English" : "العربية"}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Rounds */}
-            <div className="mb-4">
-              <label className="text-xs font-semibold text-gray-500 mb-2 block">ROUNDS</label>
-              <div className="flex gap-2">
-                {[5, 10, 15, 20].map((n) => (
-                  <button
-                    key={n}
-                    onClick={() => handleUpdateSettings(lobby.language, n, lobby.freeMode)}
-                    className={`px-4 py-2.5 rounded-lg text-sm font-bold transition-all active:scale-95
-                      ${lobby.totalRounds === n
-                        ? "bg-purple-600 text-white shadow-md"
-                        : "bg-white text-gray-600 hover:bg-gray-50"
-                      }`}
-                  >
-                    {n}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Free Mode */}
-            <div>
-              <button
-                onClick={() => handleUpdateSettings(lobby.language, lobby.totalRounds, !lobby.freeMode)}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-bold transition-all active:scale-95
-                  ${lobby.freeMode
-                    ? "bg-green-600 text-white shadow-md"
-                    : "bg-white text-gray-600 hover:bg-gray-50"
-                  }`}
-              >
-                <span className={`w-4 h-4 rounded border-2 flex items-center justify-center text-[10px]
-                  ${lobby.freeMode ? "border-white bg-white/20" : "border-gray-400"}`}>
-                  {lobby.freeMode && "✓"}
-                </span>
-                Free Mode (cached questions only, no AI)
-              </button>
-            </div>
+        {/* Waiting for host message */}
+        <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 text-center">
+          <div className="flex justify-center mb-2">
+            <div className="w-6 h-6 border-3 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
           </div>
-        )}
-
-        {/* Non-host settings display */}
-        {!player.isHost && (
-          <div className="bg-parchment rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
-            <h2 className="text-xs font-bold text-gray-500 mb-3">GAME SETTINGS</h2>
-            <div className="text-sm text-gray-600 space-y-1">
-              <p><span className="font-semibold">Language:</span> {lobby.language === KalakLanguage.ENGLISH ? "English" : "العربية"}</p>
-              <p><span className="font-semibold">Rounds:</span> {lobby.totalRounds}</p>
-              {lobby.freeMode && (
-                <p><span className="font-semibold">Mode:</span> Free (cached questions only)</p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Start Button */}
-        {player.isHost && (
-          <button
-            onClick={handleStart}
-            disabled={!canStart}
-            className={`w-full py-4 rounded-xl font-bold text-lg sm:text-xl transition-all active:scale-95
-              ${canStart
-                ? "bg-purple-600 text-white shadow-lg shadow-purple-600/30 hover:bg-purple-700"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-              }`}
-          >
-            {canStart ? "START GAME" : "Need at least 3 players"}
-          </button>
-        )}
+          <p className="text-purple-700 text-sm font-semibold">
+            Waiting for host to start the game...
+          </p>
+          <p className="text-purple-400 text-xs mt-1">
+            {connectedCount < 3
+              ? `Need at least 3 players (${connectedCount} connected)`
+              : `${connectedCount} players ready`
+            }
+          </p>
+        </div>
       </div>
     </div>
   );

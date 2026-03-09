@@ -3,6 +3,7 @@ import path from "path";
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 import express from "express";
 import http from "http";
+import os from "os";
 import cors from "cors";
 import { Server } from "socket.io";
 import { PORT } from "./config";
@@ -32,6 +33,12 @@ const timerManager = getTimerManager();
 // Load cached questions for Kalak
 loadQuestionCache();
 
+// API endpoint to get LAN IP for QR code generation
+app.get("/api/server-info", (_req, res) => {
+  const lanIp = getLanIp();
+  res.json({ ip: lanIp, port: PORT });
+});
+
 io.on("connection", (socket) => {
   console.log(`Connected: ${socket.id}`);
 
@@ -43,5 +50,19 @@ io.on("connection", (socket) => {
 });
 
 server.listen(PORT, "0.0.0.0", () => {
+  const lanIp = getLanIp();
   console.log(`Game server running on http://0.0.0.0:${PORT}`);
+  console.log(`LAN access: http://${lanIp}:${PORT}`);
 });
+
+function getLanIp(): string {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name] || []) {
+      if (iface.family === "IPv4" && !iface.internal) {
+        return iface.address;
+      }
+    }
+  }
+  return "localhost";
+}

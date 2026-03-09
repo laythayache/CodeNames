@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useGame } from "../context/GameContext";
 import { usePlayer } from "../context/PlayerContext";
 import { getSocket } from "../socket";
+import { playSound } from "../services/sounds";
 
 export function KalakGameOverPage() {
   const { state } = useGame();
@@ -9,9 +10,13 @@ export function KalakGameOverPage() {
   const gameOver = state.kalakGameOver;
   const [showHistory, setShowHistory] = useState(false);
 
+  useEffect(() => {
+    if (gameOver) playSound("game-over");
+  }, [gameOver]);
+
   if (!gameOver) return null;
 
-  const { scores, roundHistory, winner } = gameOver;
+  const { scores, roundHistory, winner, awards } = gameOver;
 
   return (
     <div className="min-h-dvh bg-felt p-3 sm:p-4">
@@ -56,6 +61,25 @@ export function KalakGameOverPage() {
             ))}
           </div>
         </div>
+
+        {/* Awards */}
+        {awards.length > 0 && (
+          <div className="bg-parchment rounded-xl p-4 sm:p-6 mb-4 sm:mb-6">
+            <h2 className="text-xs font-bold text-gray-500 mb-3">SPECIAL AWARDS</h2>
+            <div className="space-y-2">
+              {awards.map((award, i) => (
+                <div key={i} className="flex items-center gap-3 px-3 py-2 bg-white rounded-lg">
+                  <span className="text-2xl">{award.emoji}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-bold text-gray-400 uppercase">{award.title}</div>
+                    <div className="text-sm font-bold text-purple-700">{award.playerName}</div>
+                  </div>
+                  <span className="text-xs text-gray-500 shrink-0">{award.value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Round History Toggle */}
         <button

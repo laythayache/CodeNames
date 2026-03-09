@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useSocketEvents } from "./hooks/useSocket";
 import { useGame } from "./context/GameContext";
 import { usePlayer } from "./context/PlayerContext";
@@ -9,37 +10,90 @@ import { GameOverPage } from "./pages/GameOverPage";
 import { KalakLobbyPage } from "./pages/KalakLobbyPage";
 import { KalakGamePage } from "./pages/KalakGamePage";
 import { KalakGameOverPage } from "./pages/KalakGameOverPage";
-import { disconnectSocket } from "./socket";
+import { KalakHostLobbyPage } from "./pages/KalakHostLobbyPage";
+import { KalakHostGamePage } from "./pages/KalakHostGamePage";
+import { KalakHostGameOverPage } from "./pages/KalakHostGameOverPage";
+import { JoinPage } from "./pages/JoinPage";
+import { disconnectSocket, getSocket } from "./socket";
+
+function KickedPage() {
+  const player = usePlayer();
+  const { dispatch } = useGame();
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-felt p-4">
+      <div className="bg-parchment rounded-2xl p-8 text-center max-w-md">
+        <h1 className="text-2xl font-bold text-team-red mb-4">You've been removed</h1>
+        <p className="text-gray-600 mb-6">The host has removed you from the game.</p>
+        <button
+          onClick={() => {
+            disconnectSocket();
+            player.reset();
+            dispatch({ type: "RESET" });
+            // Clear room param from URL
+            window.history.replaceState({}, "", window.location.pathname);
+          }}
+          className="px-6 py-3 bg-wood text-white rounded-lg font-semibold hover:bg-wood-dark"
+        >
+          Back to Home
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function AppContent() {
   useSocketEvents();
 
-  const { state, dispatch } = useGame();
+  const { state } = useGame();
   const player = usePlayer();
 
-  // Kicked state
-  if (state.kicked) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-felt p-4">
-        <div className="bg-parchment rounded-2xl p-8 text-center max-w-md">
-          <h1 className="text-2xl font-bold text-team-red mb-4">You've been removed</h1>
-          <p className="text-gray-600 mb-6">The host has removed you from the game.</p>
-          <button
-            onClick={() => {
-              disconnectSocket();
-              player.reset();
-              dispatch({ type: "RESET" });
-            }}
-            className="px-6 py-3 bg-wood text-white rounded-lg font-semibold hover:bg-wood-dark"
-          >
-            Back to Home
-          </button>
-        </div>
-      </div>
-    );
+  // Listen for server:room-created to set isHostDisplay when applicable
+  useEffect(() => {
+    const socket = getSocket();
+
+    const onRoomCreated = (data: { roomCode: string; isHostDisplay?: boolean }) => {
+      if (data.isHostDisplay) {
+        player.setIsHostDisplay(true);
+      }
+    };
+
+    socket.on("server:room-created", onRoomCreated);
+    return () => {
+      socket.off("server:room-created", onRoomCreated);
+    };
+  }, [player]);
+
+  // ── Check if URL has ?room=XXX → JoinPage (player scanning QR) ──
+  const params = new URLSearchParams(window.location.search);
+  const roomParam = params.get("room");
+
+  if (roomParam && !player.roomCode) {
+    // Player is scanning QR but hasn't joined yet
+    return <JoinPage />;
   }
 
-  // ── Kalak routing ──
+  // ── Kicked state ──
+  if (state.kicked) {
+    return <KickedPage />;
+  }
+
+  // ── Host display routing (laptop/TV screen) ──
+  if (player.isHostDisplay) {
+    if (state.kalakGameOver) {
+      return <KalakHostGameOverPage />;
+    }
+    if (state.kalakHostDisplay) {
+      return <KalakHostGamePage />;
+    }
+    if (state.kalakLobbyState) {
+      return <KalakHostLobbyPage />;
+    }
+    // Host display waiting for room creation to complete
+    return <HomePage />;
+  }
+
+  // ── Kalak player routing ──
   if (state.gameType === GameType.KALAK || player.gameType === GameType.KALAK) {
     const kalakPhase = state.kalakState?.phase;
 
@@ -54,7 +108,7 @@ function AppContent() {
     }
   }
 
-  // ── Codenames routing ──
+  // ── Codenames player routing ──
   const phase = state.gameState?.phase;
 
   if (phase === GamePhase.GAME_OVER || state.gameOver) {
@@ -69,6 +123,7 @@ function AppContent() {
     return <LobbyPage />;
   }
 
+  // ── Default → HomePage (Codenames create/join or Kalak host setup) ──
   return <HomePage />;
 }
 

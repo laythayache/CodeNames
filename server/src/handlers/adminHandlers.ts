@@ -47,11 +47,20 @@ export function registerAdminHandlers(
   });
 
   socket.on("client:admin-kick", (data: KickPlayerPayload) => {
-    const baseGame = gameManager.findGameBySocketId(socket.id);
+    // Check both player host and host display socket
+    let baseGame = gameManager.findGameBySocketId(socket.id);
+    if (!baseGame) {
+      baseGame = gameManager.findGameByHostDisplaySocket(socket.id) ?? undefined;
+    }
     if (!baseGame) return;
 
-    const player = baseGame.findPlayerBySocketId(socket.id);
-    if (!player?.isHost) return;
+    // For Kalak, host display can kick. For Codenames, player host can kick.
+    if (baseGame.gameType === GameType.KALAK) {
+      if (baseGame.hostDisplaySocketId !== socket.id) return;
+    } else {
+      const player = baseGame.findPlayerBySocketId(socket.id);
+      if (!player?.isHost) return;
+    }
 
     const target = baseGame.findPlayerByName(data.displayName);
     if (!target || target.isHost) return;

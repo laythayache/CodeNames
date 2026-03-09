@@ -5,33 +5,41 @@ import {
   UpdateSettingsPayload, GamePhase, GameType,
 } from "shared/types";
 import { Game } from "../models/Game";
+import { KalakGame } from "../models/KalakGame";
+import { createToken } from "../services/auth";
 
 export function registerLobbyHandlers(
   io: Server,
   socket: Socket,
   gameManager: GameManager
 ): void {
+  // Create room — for Kalak, laptop is host display (no player); for Codenames, host is a player
   socket.on("client:create-room", (data: CreateRoomPayload) => {
-    const { displayName } = data;
-    if (!displayName?.trim()) {
-      socket.emit("server:join-error", { message: "Display name is required" });
-      return;
-    }
-
     const gameType = data.gameType === GameType.KALAK ? GameType.KALAK : GameType.CODENAMES;
-    const game = gameManager.createGame(socket.id, displayName.trim(), gameType);
-    socket.join(game.roomCode);
-    socket.emit("server:room-created", { roomCode: game.roomCode, gameType });
 
     if (gameType === GameType.KALAK) {
-      io.to(game.roomCode).emit("server:kalak-lobby-state", game.getLobbyState());
+      // Laptop creates room as host display — NOT a player
+      const game = gameManager.createKalakRoom(socket.id);
+      socket.join(game.roomCode);
+      socket.emit("server:room-created", { roomCode: game.roomCode, gameType, isHostDisplay: true });
+      socket.emit("server:kalak-lobby-state", game.getLobbyState());
     } else {
+      // Codenames: need displayName, host IS a player
+      const displayName = (data as any).displayName;
+      if (!displayName?.trim()) {
+        socket.emit("server:join-error", { message: "Display name is required" });
+        return;
+      }
+      const game = gameManager.createCodenamesRoom(socket.id, displayName.trim());
+      socket.join(game.roomCode);
+      socket.emit("server:room-created", { roomCode: game.roomCode, gameType });
       io.to(game.roomCode).emit("server:lobby-state", game.getLobbyState());
     }
   });
 
+  // Join room — player joins with name + avatar
   socket.on("client:join-room", (data: JoinRoomPayload) => {
-    const { roomCode, displayName } = data;
+    const { roomCode, displayName, avatar } = data;
     if (!displayName?.trim()) {
       socket.emit("server:join-error", { message: "Display name is required" });
       return;
@@ -43,23 +51,56 @@ export function registerLobbyHandlers(
       return;
     }
 
-    if (game.phase !== GamePhase.LOBBY) {
-      socket.emit("server:join-error", { message: "Game already in progress" });
-      return;
-    }
-
     if (game.isNameTaken(displayName.trim())) {
       socket.emit("server:join-error", { message: "Name already taken in this room" });
       return;
     }
 
-    game.addPlayer(socket.id, displayName.trim(), false);
-    socket.join(game.roomCode);
-    socket.emit("server:room-created", { roomCode: game.roomCode, gameType: game.gameType });
-
+    // Allow mid-game join for Kalak
     if (game.gameType === GameType.KALAK) {
-      io.to(game.roomCode).emit("server:kalak-lobby-state", game.getLobbyState());
+      const kg = game as KalakGame;
+
+      if (game.phase !== GamePhase.LOBBY && game.phase !== GamePhase.PLAYING) {
+        socket.emit("server:join-error", { message: "Game has ended" });
+        return;
+      }
+
+      kg.addPlayer(socket.id, displayName.trim(), false, avatar);
+      socket.join(game.roomCode);
+
+      // Create JWT token for persistent session
+      const { token } = createToken(displayName.trim(), roomCode.toUpperCase(), avatar);
+      socket.emit("server:room-joined", {
+        roomCode: game.roomCode,
+        gameType: GameType.KALAK,
+        token,
+      });
+
+      if (game.phase === GamePhase.LOBBY) {
+        io.to(game.roomCode).emit("server:kalak-lobby-state", kg.getLobbyState());
+      } else {
+        // Mid-game join: send current game state to new player
+        const player = kg.findPlayerBySocketId(socket.id)!;
+        socket.emit("server:kalak-game-state", kg.getGameStatePayload(player));
+        // Update host display with new player
+        if (kg.hostDisplaySocketId) {
+          const hostSock = io.sockets.sockets.get(kg.hostDisplaySocketId);
+          if (hostSock) hostSock.emit("server:kalak-host-display", kg.getHostDisplayPayload());
+        }
+      }
     } else {
+      // Codenames: only join in LOBBY
+      if (game.phase !== GamePhase.LOBBY) {
+        socket.emit("server:join-error", { message: "Game already in progress" });
+        return;
+      }
+
+      game.addPlayer(socket.id, displayName.trim(), false);
+      socket.join(game.roomCode);
+      socket.emit("server:room-joined", {
+        roomCode: game.roomCode,
+        gameType: GameType.CODENAMES,
+      });
       io.to(game.roomCode).emit("server:lobby-state", game.getLobbyState());
     }
   });
@@ -106,7 +147,6 @@ export function registerLobbyHandlers(
 
     cg.start();
 
-    // Send role-filtered state to each player
     for (const p of game.players) {
       const sock = io.sockets.sockets.get(p.id);
       if (sock) {
