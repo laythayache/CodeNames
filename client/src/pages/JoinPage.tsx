@@ -76,13 +76,23 @@ export function JoinPage() {
         setJoining(false);
         socket.off("server:join-error", onError);
         socket.off("server:error", onError);
+        socket.off("connect_error", onConnectError);
+      };
+      const onConnectError = () => {
+        setError("Could not connect to the game server. Make sure you're on the same WiFi network as the host.");
+        setJoining(false);
+        socket.off("server:join-error", onError);
+        socket.off("server:error", onError);
+        socket.off("connect_error", onConnectError);
       };
       socket.on("server:join-error", onError);
       socket.on("server:error", onError);
+      socket.on("connect_error", onConnectError);
 
       return () => {
         socket.off("server:join-error", onError);
         socket.off("server:error", onError);
+        socket.off("connect_error", onConnectError);
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -115,9 +125,18 @@ export function JoinPage() {
       setJoining(false);
       socket.off("server:join-error", onError);
       socket.off("server:error", onError);
+      socket.off("connect_error", onConnectError);
+    };
+    const onConnectError = () => {
+      setError("Could not connect to the game server. Make sure you're on the same WiFi network as the host.");
+      setJoining(false);
+      socket.off("server:join-error", onError);
+      socket.off("server:error", onError);
+      socket.off("connect_error", onConnectError);
     };
     socket.on("server:join-error", onError);
     socket.on("server:error", onError);
+    socket.on("connect_error", onConnectError);
   };
 
   // No room code in URL

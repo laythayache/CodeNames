@@ -98,12 +98,33 @@ server.listen(PORT, "0.0.0.0", () => {
 
 function getLanIp(): string {
   const interfaces = os.networkInterfaces();
+  const candidates: { address: string; priority: number }[] = [];
+
   for (const name of Object.keys(interfaces)) {
     for (const iface of interfaces[name] || []) {
-      if (iface.family === "IPv4" && !iface.internal) {
-        return iface.address;
+      if (iface.family !== "IPv4" || iface.internal) continue;
+
+      const lower = name.toLowerCase();
+      let priority = 0;
+
+      // Prefer real LAN adapters over virtual ones
+      if (lower.includes("wi-fi") || lower.includes("wifi") || lower.includes("wlan")) {
+        priority = 100;
+      } else if (lower.includes("ethernet") || lower.includes("eth")) {
+        priority = 90;
+      } else if (iface.address.startsWith("192.168.") || iface.address.startsWith("10.")) {
+        priority = 50;
+      } else if (lower.includes("vethernet") || lower.includes("docker") || lower.includes("vmware") || lower.includes("hyper-v") || lower.includes("vbox")) {
+        priority = -10;
       }
+
+      candidates.push({ address: iface.address, priority });
     }
+  }
+
+  if (candidates.length > 0) {
+    candidates.sort((a, b) => b.priority - a.priority);
+    return candidates[0].address;
   }
   return "localhost";
 }
