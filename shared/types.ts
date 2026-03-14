@@ -210,6 +210,7 @@ export interface ErrorPayload {
 export enum GameType {
   CODENAMES = "CODENAMES",
   KALAK = "KALAK",
+  GWDW = "GWDW",
 }
 
 // ── Kalak Enums ──
@@ -374,6 +375,171 @@ export interface KalakSubmitAnswerPayload {
 
 export interface KalakVotePayload {
   answerId: string;
+}
+
+// ── GWDW (Guess Who Did What) Enums ──
+
+export enum GwdwRoundPhase {
+  PROMPT = "PROMPT",
+  WRITING = "WRITING",
+  REVEAL_ANSWER = "REVEAL_ANSWER",
+  REVEAL_VOTING = "REVEAL_VOTING",
+  REVEAL_RESULT = "REVEAL_RESULT",
+  ROUND_SCORES = "ROUND_SCORES",
+}
+
+export enum GwdwLanguage {
+  ENGLISH = "ENGLISH",
+  ARABIC = "ARABIC",
+}
+
+// ── GWDW Timer Config ──
+
+export interface GwdwTimerConfig {
+  promptDisplay: number;    // seconds to show prompt (default 3)
+  writing: number;          // seconds for writing (default 45)
+  votingPerAnswer: number;  // seconds per answer voting (default 15)
+  revealResult: number;     // seconds to show author reveal (default 5)
+  roundScores: number;      // seconds to show round scores (default 8)
+}
+
+export const DEFAULT_GWDW_TIMERS: GwdwTimerConfig = {
+  promptDisplay: 3,
+  writing: 45,
+  votingPerAnswer: 15,
+  revealResult: 5,
+  roundScores: 8,
+};
+
+// ── GWDW Interfaces ──
+
+export interface GwdwAnswer {
+  id: string;
+  text: string;
+  authorId: string;
+  authorName: string;
+}
+
+export interface GwdwVote {
+  voterName: string;
+  guessedAuthorName: string;
+}
+
+export interface GwdwAnswerResult {
+  answerId: string;
+  answerText: string;
+  authorName: string;
+  votes: GwdwVote[];
+  correctVoters: string[];
+  authorPoints: number;
+  voterPoints: Record<string, number>;
+}
+
+export interface GwdwPlayerScore {
+  displayName: string;
+  score: number;
+  correctGuesses: number;
+  timesIdentified: number;
+  timesEvaded: number;
+  roundsPlayed: number;
+}
+
+export interface GwdwRoundResult {
+  roundNumber: number;
+  prompt: string;
+  answerResults: GwdwAnswerResult[];
+  scoreDeltas: Record<string, number>;
+  didntAnswer: string[];
+}
+
+export interface GwdwAward {
+  title: string;
+  titleAr: string;
+  playerName: string;
+  value: string;
+  emoji: string;
+}
+
+// ── GWDW Payloads ──
+
+export interface GwdwGameStatePayload {
+  roomCode: string;
+  gameType: GameType.GWDW;
+  phase: GamePhase;
+  roundPhase: GwdwRoundPhase;
+  players: Player[];
+  scores: GwdwPlayerScore[];
+  currentRound: number;
+  totalRounds: number;
+  language: GwdwLanguage;
+  categories: string[];
+  prompt: string | null;
+  playersAnswered: string[];
+  currentRevealAnswer: { id: string; text: string } | null;
+  currentRevealIndex: number;
+  totalAnswers: number;
+  isCurrentAuthor: boolean;
+  currentVoters: string[];
+  currentAnswerResult: GwdwAnswerResult | null;
+  roundResult: GwdwRoundResult | null;
+  timerSeconds: number | null;
+}
+
+export interface GwdwHostDisplayPayload {
+  roomCode: string;
+  phase: GamePhase;
+  roundPhase: GwdwRoundPhase;
+  players: Player[];
+  scores: GwdwPlayerScore[];
+  currentRound: number;
+  totalRounds: number;
+  language: GwdwLanguage;
+  categories: string[];
+  prompt: string | null;
+  playersAnswered: string[];
+  currentRevealAnswer: { id: string; text: string } | null;
+  currentRevealIndex: number;
+  totalAnswers: number;
+  voteDistribution: Record<string, number>;
+  currentVoters: string[];
+  currentAnswerResult: GwdwAnswerResult | null;
+  roundResult: GwdwRoundResult | null;
+  timerSeconds: number | null;
+  playerCount: number;
+}
+
+export interface GwdwLobbyStatePayload {
+  gameType: GameType.GWDW;
+  roomCode: string;
+  players: Player[];
+  language: GwdwLanguage;
+  categories: string[];
+  totalRounds: number;
+  timers: GwdwTimerConfig;
+}
+
+export interface GwdwGameOverPayload {
+  scores: GwdwPlayerScore[];
+  roundHistory: GwdwRoundResult[];
+  winner: string;
+  awards: GwdwAward[];
+}
+
+// ── GWDW Socket Payloads ──
+
+export interface GwdwUpdateSettingsPayload {
+  language: GwdwLanguage;
+  categories: string[];
+  totalRounds: number;
+  timers: GwdwTimerConfig;
+}
+
+export interface GwdwSubmitAnswerPayload {
+  answer: string;
+}
+
+export interface GwdwVoteAuthorPayload {
+  guessedAuthorName: string;
 }
 
 // ── JWT ──

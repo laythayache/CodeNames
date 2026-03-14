@@ -8,6 +8,8 @@ import type {
   VotesUpdatedPayload, KalakGameStatePayload, KalakLobbyStatePayload,
   KalakGameOverPayload, KalakRoundResult, KalakHostDisplayPayload,
   KalakPlayerScore, Player, GameType, CodenamesHostDisplayPayload,
+  GwdwGameStatePayload, GwdwLobbyStatePayload, GwdwGameOverPayload,
+  GwdwHostDisplayPayload, GwdwRoundResult, GwdwAnswerResult,
 } from "shared/types";
 
 export function useSocketEvents(): void {
@@ -143,6 +145,56 @@ export function useSocketEvents(): void {
       dispatch({ type: "SET_CODENAMES_HOST_DISPLAY", payload: data });
     };
 
+    // ── GWDW events ──
+
+    const onGwdwLobbyState = (data: GwdwLobbyStatePayload) => {
+      dispatch({ type: "SET_GWDW_LOBBY_STATE", payload: data });
+      const me = data.players.find((p: Player) => p.displayName === player.displayName);
+      if (me) {
+        player.setIsHost(me.isHost);
+      }
+    };
+
+    const onGwdwGameState = (data: GwdwGameStatePayload) => {
+      dispatch({ type: "SET_GWDW_GAME_STATE", payload: data });
+      const me = data.players.find((p: Player) => p.displayName === player.displayName);
+      if (me) {
+        player.setIsHost(me.isHost);
+      }
+    };
+
+    const onGwdwGameOver = (data: GwdwGameOverPayload) => {
+      dispatch({ type: "SET_GWDW_GAME_OVER", payload: data });
+    };
+
+    const onGwdwHostDisplay = (data: GwdwHostDisplayPayload) => {
+      dispatch({ type: "SET_GWDW_HOST_DISPLAY", payload: data });
+    };
+
+    const onGwdwRoundResult = (data: GwdwRoundResult) => {
+      dispatch({ type: "SET_GWDW_ROUND_RESULT", payload: data });
+    };
+
+    const onGwdwAnswerResult = (data: GwdwAnswerResult) => {
+      dispatch({ type: "SET_GWDW_ANSWER_RESULT", payload: data });
+    };
+
+    const onGwdwLoading = () => {
+      dispatch({ type: "SET_GWDW_LOADING", payload: true });
+    };
+
+    const onGwdwPlayerAnswered = (data: { displayName: string }) => {
+      dispatch({ type: "SET_GWDW_PLAYER_ANSWERED", payload: data.displayName });
+    };
+
+    const onGwdwPlayerVoted = (data: { displayName: string }) => {
+      dispatch({ type: "SET_GWDW_PLAYER_VOTED", payload: data.displayName });
+    };
+
+    const onGwdwSound = (data: { sound: string }) => {
+      playSound(data.sound);
+    };
+
     // ── Register ──
 
     socket.on("server:room-created", onRoomCreated);
@@ -168,6 +220,16 @@ export function useSocketEvents(): void {
     socket.on("server:kalak-player-answered", onKalakPlayerAnswered);
     socket.on("server:kalak-player-voted", onKalakPlayerVoted);
     socket.on("server:codenames-host-display", onCodenamesHostDisplay);
+    socket.on("server:gwdw-lobby-state", onGwdwLobbyState);
+    socket.on("server:gwdw-game-state", onGwdwGameState);
+    socket.on("server:gwdw-game-over", onGwdwGameOver);
+    socket.on("server:gwdw-host-display", onGwdwHostDisplay);
+    socket.on("server:gwdw-round-result", onGwdwRoundResult);
+    socket.on("server:gwdw-answer-result", onGwdwAnswerResult);
+    socket.on("server:gwdw-loading", onGwdwLoading);
+    socket.on("server:gwdw-player-answered", onGwdwPlayerAnswered);
+    socket.on("server:gwdw-player-voted", onGwdwPlayerVoted);
+    socket.on("server:gwdw-sound", onGwdwSound);
 
     return () => {
       socket.off("server:room-created", onRoomCreated);
@@ -193,6 +255,16 @@ export function useSocketEvents(): void {
       socket.off("server:kalak-player-answered", onKalakPlayerAnswered);
       socket.off("server:kalak-player-voted", onKalakPlayerVoted);
       socket.off("server:codenames-host-display", onCodenamesHostDisplay);
+      socket.off("server:gwdw-lobby-state", onGwdwLobbyState);
+      socket.off("server:gwdw-game-state", onGwdwGameState);
+      socket.off("server:gwdw-game-over", onGwdwGameOver);
+      socket.off("server:gwdw-host-display", onGwdwHostDisplay);
+      socket.off("server:gwdw-round-result", onGwdwRoundResult);
+      socket.off("server:gwdw-answer-result", onGwdwAnswerResult);
+      socket.off("server:gwdw-loading", onGwdwLoading);
+      socket.off("server:gwdw-player-answered", onGwdwPlayerAnswered);
+      socket.off("server:gwdw-player-voted", onGwdwPlayerVoted);
+      socket.off("server:gwdw-sound", onGwdwSound);
     };
   }, [dispatch, player]);
 }

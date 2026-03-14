@@ -100,6 +100,27 @@ const sounds: Record<string, () => void> = {
     // Click
     playTone(660, 0.06, "sine", 0.2);
   },
+
+  "writing-start": () => {
+    // Quick ascending chime — start writing
+    playTone(440, 0.12, "triangle", 0.2, 0);
+    playTone(554, 0.12, "triangle", 0.2, 0.1);
+    playTone(659, 0.2, "triangle", 0.25, 0.2);
+  },
+
+  "answer-reveal": () => {
+    // Dramatic whoosh — answer appearing
+    playTone(200, 0.15, "sawtooth", 0.08, 0);
+    playTone(400, 0.15, "sawtooth", 0.1, 0.08);
+    playTone(800, 0.3, "triangle", 0.15, 0.15);
+  },
+
+  "author-reveal": () => {
+    // Dramatic reveal with suspense
+    playChord([330, 415, 523], 0.5, "sawtooth", 0.08);
+    playTone(523, 0.4, "triangle", 0.2, 0.4);
+    playTone(659, 0.5, "triangle", 0.2, 0.6);
+  },
 };
 
 export function playSound(name: string): void {

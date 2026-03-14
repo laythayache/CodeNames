@@ -3,6 +3,7 @@ import { GameManager } from "../managers/GameManager";
 import { GamePhase, GameType, Player } from "shared/types";
 import { Game } from "../models/Game";
 import { KalakGame } from "../models/KalakGame";
+import { GwdwGame } from "../models/GwdwGame";
 import type { BaseGame } from "../models/BaseGame";
 import { verifyToken } from "../services/auth";
 import { ABANDONMENT_TIMEOUT } from "../config";
@@ -70,7 +71,14 @@ export function registerConnectionHandlers(
     player.isConnected = false;
 
     // Notify room
-    if (game.gameType === GameType.KALAK) {
+    if (game.gameType === GameType.GWDW) {
+      const gw = game as GwdwGame;
+      if (game.phase === GamePhase.LOBBY) {
+        io.to(game.roomCode).emit("server:gwdw-lobby-state", gw.getLobbyState());
+      } else {
+        broadcastGwdwState(io, gw);
+      }
+    } else if (game.gameType === GameType.KALAK) {
       const kg = game as KalakGame;
       if (game.phase === GamePhase.LOBBY) {
         io.to(game.roomCode).emit("server:kalak-lobby-state", kg.getLobbyState());
@@ -128,13 +136,21 @@ function reconnectPlayer(io: Server, socket: Socket, game: BaseGame, player: Pla
 
   console.log(`Reconnected: ${player.displayName} to room ${game.roomCode}`);
 
-  if (game.gameType === GameType.KALAK) {
+  if (game.gameType === GameType.GWDW) {
+    const gw = game as GwdwGame;
+    socket.emit("server:room-joined", { roomCode: game.roomCode, gameType: GameType.GWDW });
+    if (game.phase === GamePhase.LOBBY) {
+      io.to(game.roomCode).emit("server:gwdw-lobby-state", gw.getLobbyState());
+    } else {
+      broadcastGwdwState(io, gw);
+    }
+  } else if (game.gameType === GameType.KALAK) {
     const kg = game as KalakGame;
     socket.emit("server:room-joined", { roomCode: game.roomCode, gameType: GameType.KALAK });
     if (game.phase === GamePhase.LOBBY) {
       io.to(game.roomCode).emit("server:kalak-lobby-state", kg.getLobbyState());
     } else {
-      socket.emit("server:kalak-game-state", kg.getGameStatePayload(player));
+      broadcastKalakState(io, kg);
     }
   } else {
     const cg = game as Game;
@@ -142,7 +158,7 @@ function reconnectPlayer(io: Server, socket: Socket, game: BaseGame, player: Pla
     if (game.phase === GamePhase.LOBBY) {
       io.to(game.roomCode).emit("server:lobby-state", cg.getLobbyState());
     } else {
-      socket.emit("server:game-state", cg.getGameStatePayload(player));
+      broadcastCodenamesState(io, cg);
     }
   }
 }
@@ -168,5 +184,17 @@ function broadcastCodenamesState(io: Server, game: Game): void {
   if (game.hostDisplaySocketId) {
     const hostSock = io.sockets.sockets.get(game.hostDisplaySocketId);
     if (hostSock) hostSock.emit("server:codenames-host-display", game.getHostDisplayPayload());
+  }
+}
+
+function broadcastGwdwState(io: Server, game: GwdwGame): void {
+  for (const p of game.players) {
+    if (!p.isConnected) continue;
+    const sock = io.sockets.sockets.get(p.id);
+    if (sock) sock.emit("server:gwdw-game-state", game.getGameStatePayload(p));
+  }
+  if (game.hostDisplaySocketId) {
+    const hostSock = io.sockets.sockets.get(game.hostDisplaySocketId);
+    if (hostSock) hostSock.emit("server:gwdw-host-display", game.getHostDisplayPayload());
   }
 }

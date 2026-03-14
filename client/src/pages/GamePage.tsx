@@ -18,6 +18,7 @@ export function GamePage() {
   const isSpymaster = player.role === Role.SPYMASTER;
   const isGuessing = gs.turnPhase === TurnPhase.GUESSING;
   const isPaused = gs.phase === GamePhase.PAUSED;
+  const [showOperativeView, setShowOperativeView] = useState(false);
 
   return (
     <div className="min-h-dvh bg-felt p-1.5 sm:p-3 flex flex-col">
@@ -43,6 +44,7 @@ export function GamePage() {
             votes={state.votes}
             canVote={isMyTurn && isGuessing && (!isSpymaster || isOneVOneMode(gs))}
             isPaused={isPaused}
+            hideSpymasterTypes={isSpymaster && showOperativeView}
           />
 
           {/* Clue Input / Display */}
@@ -59,7 +61,12 @@ export function GamePage() {
           </div>
 
           {/* Spymaster Toggle */}
-          {isSpymaster && <SpymasterToggle />}
+          {isSpymaster && (
+            <SpymasterToggle
+              showOperativeView={showOperativeView}
+              onToggle={() => setShowOperativeView(!showOperativeView)}
+            />
+          )}
         </div>
 
         {/* Game Log — sidebar on desktop, toggle on mobile */}
@@ -142,12 +149,13 @@ function ProgressTracker({ gs, timerSeconds }: {
 }
 
 function Board({
-  board, votes, canVote, isPaused,
+  board, votes, canVote, isPaused, hideSpymasterTypes,
 }: {
   board: CardPayload[];
   votes: Record<number, string[]>;
   canVote: boolean;
   isPaused: boolean;
+  hideSpymasterTypes?: boolean;
 }) {
   const handleVote = (position: number) => {
     if (!canVote || isPaused) return;
@@ -157,15 +165,20 @@ function Board({
   return (
     <div className="grid grid-cols-5 gap-0.75 sm:gap-1.5 md:gap-2 w-full"
          style={{ gridAutoRows: "1fr" }}>
-      {board.map((card) => (
-        <CardComponent
-          key={card.position}
-          card={card}
-          votes={votes[card.position] || []}
-          canClick={canVote && !card.revealed}
-          onClick={() => handleVote(card.position)}
-        />
-      ))}
+      {board.map((card) => {
+        const displayCard = hideSpymasterTypes && !card.revealed
+          ? { ...card, type: undefined }
+          : card;
+        return (
+          <CardComponent
+            key={card.position}
+            card={displayCard}
+            votes={votes[card.position] || []}
+            canClick={canVote && !card.revealed}
+            onClick={() => handleVote(card.position)}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -375,13 +388,14 @@ function GuessControls({
   );
 }
 
-function SpymasterToggle() {
-  const [showOperativeView, setShowOperativeView] = useState(false);
-
+function SpymasterToggle({ showOperativeView, onToggle }: {
+  showOperativeView: boolean;
+  onToggle: () => void;
+}) {
   return (
     <div className="mt-2 text-center">
       <button
-        onClick={() => setShowOperativeView(!showOperativeView)}
+        onClick={onToggle}
         className="px-4 py-2 text-sm bg-parchment text-gray-600 rounded-full font-semibold
                    hover:bg-parchment-dark active:scale-95 transition-all"
       >

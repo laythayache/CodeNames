@@ -13,6 +13,12 @@ import { KalakGameOverPage } from "./pages/KalakGameOverPage";
 import { KalakHostLobbyPage } from "./pages/KalakHostLobbyPage";
 import { KalakHostGamePage } from "./pages/KalakHostGamePage";
 import { KalakHostGameOverPage } from "./pages/KalakHostGameOverPage";
+import { GwdwLobbyPage } from "./pages/GwdwLobbyPage";
+import { GwdwGamePage } from "./pages/GwdwGamePage";
+import { GwdwGameOverPage } from "./pages/GwdwGameOverPage";
+import { GwdwHostLobbyPage } from "./pages/GwdwHostLobbyPage";
+import { GwdwHostGamePage } from "./pages/GwdwHostGamePage";
+import { GwdwHostGameOverPage } from "./pages/GwdwHostGameOverPage";
 import { CodenamesHostLobbyPage } from "./pages/CodenamesHostLobbyPage";
 import { CodenamesHostGamePage } from "./pages/CodenamesHostGamePage";
 import { CodenamesHostGameOverPage } from "./pages/CodenamesHostGameOverPage";
@@ -96,6 +102,19 @@ function AppContent() {
         </div>
       );
       if (state.kalakLobbyState) return <KalakHostLobbyPage />;
+    } else if (gameType === GameType.GWDW) {
+      // GWDW host display
+      if (state.gwdwGameOver) return <GwdwHostGameOverPage />;
+      if (state.gwdwHostDisplay) return <GwdwHostGamePage />;
+      if (state.gwdwLoading) return (
+        <div className="min-h-screen flex items-center justify-center bg-felt">
+          <div className="bg-parchment rounded-2xl p-12 text-center shadow-xl">
+            <div className="animate-spin w-12 h-12 border-4 border-wood border-t-transparent rounded-full mx-auto mb-6" />
+            <h2 className="text-2xl font-bold text-wood-dark">Preparing prompts...</h2>
+          </div>
+        </div>
+      );
+      if (state.gwdwLobbyState) return <GwdwHostLobbyPage />;
     } else {
       // Codenames host display
       if (state.gameOver) return <CodenamesHostGameOverPage />;
@@ -119,6 +138,21 @@ function AppContent() {
     }
     if (state.kalakLobbyState && player.roomCode) {
       return <KalakLobbyPage />;
+    }
+  }
+
+  // ── GWDW player routing ──
+  if (state.gameType === GameType.GWDW || player.gameType === GameType.GWDW) {
+    const gwdwPhase = state.gwdwState?.phase;
+
+    if (gwdwPhase === GamePhase.GAME_OVER || state.gwdwGameOver) {
+      return <GwdwGameOverPage />;
+    }
+    if (gwdwPhase === GamePhase.PLAYING) {
+      return <GwdwGamePage />;
+    }
+    if (state.gwdwLobbyState && player.roomCode) {
+      return <GwdwLobbyPage />;
     }
   }
 

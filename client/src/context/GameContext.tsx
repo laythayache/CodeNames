@@ -4,6 +4,8 @@ import {
   type VotesUpdatedPayload, type KalakGameStatePayload, type KalakLobbyStatePayload,
   type KalakGameOverPayload, type KalakRoundResult, type KalakHostDisplayPayload,
   type KalakPlayerScore, type CodenamesHostDisplayPayload,
+  type GwdwGameStatePayload, type GwdwLobbyStatePayload, type GwdwGameOverPayload,
+  type GwdwHostDisplayPayload, type GwdwRoundResult, type GwdwAnswerResult,
   GamePhase, GameType, TurnPhase, Team,
 } from "shared/types";
 
@@ -25,6 +27,14 @@ interface GameState {
   kalakAnswerRejected: boolean;
   // Codenames host display
   codenamesHostDisplay: CodenamesHostDisplayPayload | null;
+  // GWDW
+  gwdwState: GwdwGameStatePayload | null;
+  gwdwLobbyState: GwdwLobbyStatePayload | null;
+  gwdwGameOver: GwdwGameOverPayload | null;
+  gwdwHostDisplay: GwdwHostDisplayPayload | null;
+  gwdwRoundResult: GwdwRoundResult | null;
+  gwdwAnswerResult: GwdwAnswerResult | null;
+  gwdwLoading: boolean;
   // Shared
   timerSeconds: number | null;
   kicked: boolean;
@@ -47,6 +57,15 @@ type GameAction =
   | { type: "SET_KALAK_PLAYERS_ANSWERED"; payload: string }
   | { type: "SET_KALAK_PLAYERS_VOTED"; payload: string }
   | { type: "SET_CODENAMES_HOST_DISPLAY"; payload: CodenamesHostDisplayPayload }
+  | { type: "SET_GWDW_GAME_STATE"; payload: GwdwGameStatePayload }
+  | { type: "SET_GWDW_LOBBY_STATE"; payload: GwdwLobbyStatePayload }
+  | { type: "SET_GWDW_GAME_OVER"; payload: GwdwGameOverPayload }
+  | { type: "SET_GWDW_HOST_DISPLAY"; payload: GwdwHostDisplayPayload }
+  | { type: "SET_GWDW_ROUND_RESULT"; payload: GwdwRoundResult }
+  | { type: "SET_GWDW_ANSWER_RESULT"; payload: GwdwAnswerResult }
+  | { type: "SET_GWDW_LOADING"; payload: boolean }
+  | { type: "SET_GWDW_PLAYER_ANSWERED"; payload: string }
+  | { type: "SET_GWDW_PLAYER_VOTED"; payload: string }
   | { type: "SET_TIMER"; payload: number }
   | { type: "TIMER_EXPIRED" }
   | { type: "KICKED" }
@@ -67,6 +86,13 @@ const initialState: GameState = {
   kalakLeaderboard: null,
   kalakAnswerRejected: false,
   codenamesHostDisplay: null,
+  gwdwState: null,
+  gwdwLobbyState: null,
+  gwdwGameOver: null,
+  gwdwHostDisplay: null,
+  gwdwRoundResult: null,
+  gwdwAnswerResult: null,
+  gwdwLoading: false,
   timerSeconds: null,
   kicked: false,
 };
@@ -94,8 +120,8 @@ function gameReducer(state: GameState, action: GameAction): GameState {
         kalakGameOver: null,
         kalakRoundResult: null,
         kalakLoading: false,
-        // Clear rejection when server confirms player is no longer rejected
-        kalakAnswerRejected: action.payload.answerRejected ? state.kalakAnswerRejected : false,
+        // Sync rejection state from server (source of truth)
+        kalakAnswerRejected: action.payload.answerRejected,
       };
     case "SET_KALAK_LOBBY_STATE":
       return {
@@ -151,6 +177,62 @@ function gameReducer(state: GameState, action: GameAction): GameState {
     }
     case "SET_CODENAMES_HOST_DISPLAY":
       return { ...state, codenamesHostDisplay: action.payload };
+    case "SET_GWDW_GAME_STATE":
+      return {
+        ...state,
+        gwdwState: action.payload,
+        gwdwGameOver: null,
+        gwdwRoundResult: null,
+        gwdwAnswerResult: null,
+        gwdwLoading: false,
+      };
+    case "SET_GWDW_LOBBY_STATE":
+      return {
+        ...state,
+        gwdwLobbyState: action.payload,
+        gwdwGameOver: null,
+        gwdwState: null,
+        gwdwHostDisplay: null,
+        gwdwRoundResult: null,
+        gwdwAnswerResult: null,
+        gwdwLoading: false,
+      };
+    case "SET_GWDW_GAME_OVER":
+      return { ...state, gwdwGameOver: action.payload };
+    case "SET_GWDW_HOST_DISPLAY":
+      return { ...state, gwdwHostDisplay: action.payload };
+    case "SET_GWDW_ROUND_RESULT":
+      return { ...state, gwdwRoundResult: action.payload };
+    case "SET_GWDW_ANSWER_RESULT":
+      return { ...state, gwdwAnswerResult: action.payload };
+    case "SET_GWDW_LOADING":
+      return {
+        ...state,
+        gwdwLoading: action.payload,
+        ...(action.payload ? { gwdwLobbyState: null } : {}),
+      };
+    case "SET_GWDW_PLAYER_ANSWERED": {
+      const name = action.payload;
+      let next = state;
+      if (next.gwdwHostDisplay && !next.gwdwHostDisplay.playersAnswered.includes(name)) {
+        next = { ...next, gwdwHostDisplay: { ...next.gwdwHostDisplay, playersAnswered: [...next.gwdwHostDisplay.playersAnswered, name] } };
+      }
+      if (next.gwdwState && !next.gwdwState.playersAnswered.includes(name)) {
+        next = { ...next, gwdwState: { ...next.gwdwState, playersAnswered: [...next.gwdwState.playersAnswered, name] } };
+      }
+      return next;
+    }
+    case "SET_GWDW_PLAYER_VOTED": {
+      const name = action.payload;
+      let next = state;
+      if (next.gwdwHostDisplay && !next.gwdwHostDisplay.currentVoters.includes(name)) {
+        next = { ...next, gwdwHostDisplay: { ...next.gwdwHostDisplay, currentVoters: [...next.gwdwHostDisplay.currentVoters, name] } };
+      }
+      if (next.gwdwState && !next.gwdwState.currentVoters.includes(name)) {
+        next = { ...next, gwdwState: { ...next.gwdwState, currentVoters: [...next.gwdwState.currentVoters, name] } };
+      }
+      return next;
+    }
     case "SET_TIMER":
       return { ...state, timerSeconds: action.payload };
     case "TIMER_EXPIRED":
@@ -189,6 +271,9 @@ export function useGamePhase(): GamePhase | null {
   const { state } = useGame();
   if (state.gameType === GameType.KALAK) {
     return state.kalakState?.phase ?? (state.kalakLobbyState ? GamePhase.LOBBY : null);
+  }
+  if (state.gameType === GameType.GWDW) {
+    return state.gwdwState?.phase ?? (state.gwdwLobbyState ? GamePhase.LOBBY : null);
   }
   return state.gameState?.phase ?? (state.lobbyState ? GamePhase.LOBBY : null);
 }

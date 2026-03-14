@@ -6,6 +6,7 @@ import {
 } from "shared/types";
 import { Game } from "../models/Game";
 import { KalakGame } from "../models/KalakGame";
+import { GwdwGame } from "../models/GwdwGame";
 import { createToken } from "../services/auth";
 
 export function registerLobbyHandlers(
@@ -15,15 +16,19 @@ export function registerLobbyHandlers(
 ): void {
   // Create room — both Kalak and Codenames use host display pattern (laptop is NOT a player)
   socket.on("client:create-room", (data: CreateRoomPayload) => {
-    const gameType = data.gameType === GameType.KALAK ? GameType.KALAK : GameType.CODENAMES;
+    const gameType = data.gameType ?? GameType.CODENAMES;
 
     if (gameType === GameType.KALAK) {
       const game = gameManager.createKalakRoom(socket.id);
       socket.join(game.roomCode);
       socket.emit("server:room-created", { roomCode: game.roomCode, gameType, isHostDisplay: true });
       socket.emit("server:kalak-lobby-state", game.getLobbyState());
+    } else if (gameType === GameType.GWDW) {
+      const game = gameManager.createGwdwRoom(socket.id);
+      socket.join(game.roomCode);
+      socket.emit("server:room-created", { roomCode: game.roomCode, gameType, isHostDisplay: true });
+      socket.emit("server:gwdw-lobby-state", game.getLobbyState());
     } else {
-      // Codenames: laptop is host display — NOT a player
       const game = gameManager.createCodenamesRoom(socket.id);
       socket.join(game.roomCode);
       socket.emit("server:room-created", { roomCode: game.roomCode, gameType, isHostDisplay: true });
@@ -54,7 +59,35 @@ export function registerLobbyHandlers(
       return;
     }
 
-    if (game.gameType === GameType.KALAK) {
+    if (game.gameType === GameType.GWDW) {
+      const gw = game as GwdwGame;
+
+      if (game.phase !== GamePhase.LOBBY && game.phase !== GamePhase.PLAYING) {
+        socket.emit("server:join-error", { message: "Game has ended" });
+        return;
+      }
+
+      gw.addPlayer(socket.id, displayName.trim(), false, avatar);
+      socket.join(game.roomCode);
+
+      const { token } = createToken(displayName.trim(), roomCode.toUpperCase(), avatar);
+      socket.emit("server:room-joined", {
+        roomCode: game.roomCode,
+        gameType: GameType.GWDW,
+        token,
+      });
+
+      if (game.phase === GamePhase.LOBBY) {
+        io.to(game.roomCode).emit("server:gwdw-lobby-state", gw.getLobbyState());
+      } else {
+        const player = gw.findPlayerBySocketId(socket.id)!;
+        socket.emit("server:gwdw-game-state", gw.getGameStatePayload(player));
+        if (gw.hostDisplaySocketId) {
+          const hostSock = io.sockets.sockets.get(gw.hostDisplaySocketId);
+          if (hostSock) hostSock.emit("server:gwdw-host-display", gw.getHostDisplayPayload());
+        }
+      }
+    } else if (game.gameType === GameType.KALAK) {
       const kg = game as KalakGame;
 
       if (game.phase !== GamePhase.LOBBY && game.phase !== GamePhase.PLAYING) {

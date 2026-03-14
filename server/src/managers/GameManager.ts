@@ -1,6 +1,7 @@
 import { GameType } from "shared/types";
 import { Game } from "../models/Game";
 import { KalakGame } from "../models/KalakGame";
+import { GwdwGame } from "../models/GwdwGame";
 import type { BaseGame } from "../models/BaseGame";
 import { generateRoomCode } from "../utils/roomCode";
 
@@ -39,12 +40,25 @@ export class GameManager {
   }
 
   /**
+   * Create a GWDW game with host display (laptop is NOT a player).
+   */
+  createGwdwRoom(hostDisplaySocketId: string): GwdwGame {
+    const existingCodes = new Set(this.games.keys());
+    const roomCode = generateRoomCode(existingCodes);
+    const game = new GwdwGame(roomCode);
+    game.hostDisplaySocketId = hostDisplaySocketId;
+    this.games.set(roomCode, game);
+    this.hostDisplaySockets.set(hostDisplaySocketId, roomCode);
+    console.log(`GWDW room created: ${roomCode} (host display: ${hostDisplaySocketId})`);
+    return game;
+  }
+
+  /**
    * Legacy createGame for backward compatibility.
    */
   createGame(hostSocketId: string, _hostName: string, gameType: GameType = GameType.CODENAMES): BaseGame {
-    if (gameType === GameType.KALAK) {
-      return this.createKalakRoom(hostSocketId);
-    }
+    if (gameType === GameType.KALAK) return this.createKalakRoom(hostSocketId);
+    if (gameType === GameType.GWDW) return this.createGwdwRoom(hostSocketId);
     return this.createCodenamesRoom(hostSocketId);
   }
 
@@ -60,6 +74,11 @@ export class GameManager {
   getKalakGame(roomCode: string): KalakGame | undefined {
     const game = this.getGame(roomCode);
     return game?.gameType === GameType.KALAK ? game as KalakGame : undefined;
+  }
+
+  getGwdwGame(roomCode: string): GwdwGame | undefined {
+    const game = this.getGame(roomCode);
+    return game?.gameType === GameType.GWDW ? game as GwdwGame : undefined;
   }
 
   findGameBySocketId(socketId: string): BaseGame | undefined {

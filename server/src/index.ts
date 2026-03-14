@@ -15,7 +15,9 @@ import { registerGameHandlers, getTimerManager } from "./handlers/gameHandlers";
 import { registerAdminHandlers } from "./handlers/adminHandlers";
 import { registerConnectionHandlers } from "./handlers/connectionHandlers";
 import { registerKalakHandlers } from "./handlers/kalakHandlers";
+import { registerGwdwHandlers } from "./handlers/gwdwHandlers";
 import { loadQuestionCache } from "./services/questionGenerator";
+import { loadPromptCache } from "./services/promptGenerator";
 
 const app = express();
 
@@ -45,8 +47,9 @@ const io = new Server(server, {
 const gameManager = new GameManager();
 const timerManager = getTimerManager();
 
-// Load cached questions for Kalak
+// Load cached questions/prompts
 loadQuestionCache();
+loadPromptCache();
 
 // Health check
 app.get("/health", (_req, res) => {
@@ -76,6 +79,7 @@ io.on("connection", (socket) => {
   registerGameHandlers(io, socket, gameManager);
   registerAdminHandlers(io, socket, gameManager);
   registerKalakHandlers(io, socket, gameManager, timerManager);
+  registerGwdwHandlers(io, socket, gameManager, timerManager);
 });
 
 server.on("error", (err: NodeJS.ErrnoException) => {

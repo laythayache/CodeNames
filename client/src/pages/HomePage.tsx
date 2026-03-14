@@ -30,7 +30,7 @@ export function HomePage() {
           {/* Game Type Selector */}
           <div>
             <label className="block text-xs font-bold text-gray-500 mb-2">CHOOSE GAME</label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <button
                 onClick={() => setGameType(GameType.CODENAMES)}
                 className={`p-4 rounded-xl border-2 text-center transition-all active:scale-95
@@ -55,6 +55,18 @@ export function HomePage() {
                 <div className="font-bold text-sm text-wood-dark">Kalak</div>
                 <div className="text-[10px] text-gray-500 mt-0.5">Trivia bluff game</div>
               </button>
+              <button
+                onClick={() => setGameType(GameType.GWDW)}
+                className={`p-4 rounded-xl border-2 text-center transition-all active:scale-95
+                  ${gameType === GameType.GWDW
+                    ? "border-teal-500 bg-teal-500/10 shadow-md"
+                    : "border-parchment-dark bg-white hover:border-gray-400"
+                  }`}
+              >
+                <div className="text-2xl mb-1">&#x1F50D;</div>
+                <div className="font-bold text-sm text-wood-dark">Guess Who</div>
+                <div className="text-[10px] text-gray-500 mt-0.5">Who wrote what?</div>
+              </button>
             </div>
           </div>
 
@@ -62,10 +74,14 @@ export function HomePage() {
           <div className={`border rounded-xl p-3 text-center
             ${gameType === GameType.KALAK
               ? "bg-purple-50 border-purple-200"
-              : "bg-red-50 border-red-200"
+              : gameType === GameType.GWDW
+                ? "bg-teal-50 border-teal-200"
+                : "bg-red-50 border-red-200"
             }`}>
             <p className={`text-xs font-semibold
-              ${gameType === GameType.KALAK ? "text-purple-700" : "text-red-700"}`}>
+              ${gameType === GameType.KALAK ? "text-purple-700"
+                : gameType === GameType.GWDW ? "text-teal-700"
+                : "text-red-700"}`}>
               This screen becomes the host display. Players join via QR code on their phones.
             </p>
           </div>
@@ -76,7 +92,9 @@ export function HomePage() {
                        shadow-lg active:scale-95 transition-all
                        ${gameType === GameType.KALAK
                          ? "bg-purple-600 shadow-purple-600/30 hover:bg-purple-700"
-                         : "bg-team-red shadow-team-red/30 hover:bg-team-red-dark"
+                         : gameType === GameType.GWDW
+                           ? "bg-teal-600 shadow-teal-600/30 hover:bg-teal-700"
+                           : "bg-team-red shadow-team-red/30 hover:bg-team-red-dark"
                        }`}
           >
             Create Room
